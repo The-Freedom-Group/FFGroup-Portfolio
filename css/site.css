@@ -26,7 +26,12 @@
   /* dark is the default sheet */
   --bg:var(--carbon); --fg:#F4F1EB; --fg2:#B4B1AA; --fg3:#8A8781; --line:rgba(244,241,235,.14); --line2:rgba(244,241,235,.28);
   --plate:#161615; --hot:var(--pink); --hot-t:var(--pink);
+  /* the earlier portfolio's accents (the three bodies of the logo and the company colours), for figures and the system */
+  --o-pink:#ff3d9a; --o-blue:#38a9ff; --o-mint:#2fe0a0; --o-ember:#ff6a3d; --o-gold:#d7b35f; --o-violet:#a487df; --o-amber:#fbbf24; --o-slate:#94a3b8;
+  --o-grad:linear-gradient(92deg,var(--o-pink) 0%,var(--o-blue) 55%,var(--o-mint) 100%);
+  --old:"Manrope","Inter",system-ui,sans-serif; --orb:"Orbitron","Michroma",system-ui,sans-serif;
 }
+.grad{background:var(--o-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .paper{ --bg:var(--porcelain); --fg:#101010; --fg2:#4A4A46; --fg3:#6E6C66; --line:#DAD5CB; --line2:#BDB7AB; --plate:var(--sheet); --hot:var(--pink); --hot-t:var(--pink-3); }
 
 *,*::before,*::after{box-sizing:border-box}
