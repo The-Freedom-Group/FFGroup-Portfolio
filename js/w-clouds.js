@@ -62,11 +62,107 @@ export function createClouds({ small, lite }) {
     update(which, e, time, aspect) {
       u.time.value = time; u.aspect.value = aspect; st.veil = 0;
       if (which === 'down') {
-        set(DOWN); u.air.value = sp(e, -0.44, -0.04); u.depth.value = -0.9 + Math.max(-0.5, e) * (K + 1.6); u.gaps.value = 0.55; u.fog.value = sp(e, 0.74, 0.93); st.veil = sp(e, 0.9, 0.995); st.on = e > -0.46;
-        const hz = sp(e, 0.25, 0.8); u.airA.value.set(base.a[0] + (0.8 - base.a[0]) * hz, base.a[1] + (0.8 - base.a[1]) * hz, base.a[2] + (0.8 - base.a[2]) * hz); u.airB.value.set(base.b[0] + (0.88 - base.b[0]) * hz, base.b[1] + (0.86 - base.b[1]) * hz, base.b[2] + (0.83 - base.b[2]) * hz);
+        goDown(e, time, aspect, { st, scene, mesh, mat, small, lite });      // the way down has its own picture: see the end of this file
       } else if (which === 'up') {
         set(UP); u.air.value = 1 - sp(e, 0.55, 0.93); u.depth.value = -0.35 + Math.max(-0.3, e) * (K + 1.2) / 0.9; u.gaps.value = 0.62; u.fog.value = 0; st.on = e < 0.96;
       } else st.on = false;
     },
     draw(renderer) { const ac = renderer.autoClear; renderer.autoClear = false; renderer.render(scene, cam); renderer.autoClear = ac; } };
+}
+
+/* ───────── the way down ─────────
+   Going down is not the ride going up is, so it has its own picture, drawn on the same triangle. The dive ends with
+   Freedom Global filling the screen. From there:
+   - the planet's own blue closes over it, bright where the light comes in at the upper left and deepening away from it;
+   - the light blooms out of that corner until the whole screen is white;
+   - the glare clears to a pale sky with cloud in it, already lit; you fall through one deck of it and into the next;
+   - that second deck is the cool white sheet the investment screen stands on. The page lays its own sheet over the top
+     at that point (the exact colour, no grain), so nothing is drawn here until the screen moves on;
+   - on the way out more cloud passes, light on light, with a little of Global's blue left high in the air, while the
+     white turns from Global's cool to the paper's warm; the last deck closes to the colour of the journey's page.
+   Every value is a plain function of how far the scroll has got, so it runs the same backwards as forwards. */
+const DOWN_FS = `precision highp float; varying vec2 vUv;
+uniform float time, aspect, grainK, blue, white, depth, decks, gap, soften, fog, warm, wash;
+uniform vec3 cPale, cMid, cDeep, cNight, skyA, skyGap, skyB, litA, litB, shadeA, shadeB, fogA, fogB, cWash; uniform vec2 light;
+float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
+float fbm(vec2 p){ float a = 0.0, w = 0.5; for (int i = 0; i < OCT; i++) { a += w * noise(p); p = p * 2.07 + vec2(13.7, 7.1); w *= 0.5; } return a; }
+float fbm3(vec2 p){ float a = 0.0, w = 0.5; for (int i = 0; i < 3; i++) { a += w * noise(p); p = p * 2.07 + vec2(13.7, 7.1); w *= 0.5; } return a; }
+void main(){
+  vec2 p = vec2((vUv.x - 0.5) * aspect, vUv.y - 0.5);
+  float d = length(vec2((vUv.x - 0.32) * aspect, vUv.y - 0.70)) / (0.9 * length(vec2(aspect, 1.0)));   // how far from where the light comes in
+  vec3 col = mix(cPale, cMid, pow(smoothstep(0.0, 0.4, d), 0.6)); col = mix(col, cDeep, smoothstep(0.4, 0.75, d)); col = mix(col, cNight, smoothstep(0.75, 1.0, d));
+  vec3 lit = mix(litA, litB, warm), shade = mix(mix(shadeA, shadeB, warm), lit, soften);
+  vec3 sky = mix(mix(skyA, skyGap, gap * (1.0 - 0.35 * d)), skyB, warm);
+  sky = mix(sky, cWash, wash * smoothstep(0.25, 1.0, vUv.y));                             // Global's blue, thin, high in the air
+  col = mix(col, sky, smoothstep(0.0, 1.0, white * 1.85 - d));                           // the whiteout, out from the light
+  if (decks > 0.002) for (int i = LAYERS - 1; i >= 0; i--) {
+    float z = float(i) + 1.0 - depth;                             // how far off this deck is: 0 = we are in it
+    if (z < 0.02 || z > 3.6) continue;
+    vec2 q = p * z * 1.15 + vec2(hash(vec2(float(i), 1.7)), hash(vec2(float(i), 9.2))) * 40.0 + vec2(time * 0.006, 0.0);
+#ifdef WARP
+    q += (vec2(fbm3(q * 1.3 + 2.0), fbm3(q * 1.3 + 7.3)) - 0.5) * WARP;                  // the shapes are pushed about, so edges billow
+#endif
+    float n = fbm(q), l = fbm(q + light * 0.07);
+    float th = 0.47 - 0.05 * hash(vec2(float(i), 3.3));
+    float dens = smoothstep(th, th + mix(0.4, 0.15, smoothstep(0.1, 1.2, z)), n) * smoothstep(3.6, 2.2, z) * smoothstep(0.02, 0.25, z) * decks;
+    float k = clamp(0.5 + (n - l) * 9.0, 0.0, 1.0); k = k * k * (3.0 - 2.0 * k);
+    vec3 c = mix(mix(shade, lit, k), sky, smoothstep(1.2, 3.6, z) * 0.55);               // distance takes the contrast out
+    col = mix(col, c, dens);
+    col = mix(col, mix(shade, lit, 0.78), (1.0 - smoothstep(0.0, 0.3, z)) * 0.6 * decks);    // inside a deck everything goes to its own white
+  }
+  col = mix(col, mix(fogA, fogB, warm), fog);
+  col *= 1.0 + (hash(gl_FragCoord.xy + fract(time) * 91.7) - 0.5) * grainK;
+  gl_FragColor = vec4(col, blue);
+}`;
+
+/* The colours, scene-linear, each worked back from the screen colour it has to arrive at once the film finish has had
+   it (post.js: the filmic curve, then warmer highlights). The blues are the earlier portfolio's own for this planet. */
+const TINT = {
+  cPale: [0.126, 1.041, 3.511], cMid: [0.028, 0.252, 0.888], cDeep: [0.032, 0.087, 0.268], cNight: [0.015, 0.026, 0.094],   // #c2e6f8, #3f9ae2, #1c4f9c, #071c52
+  skyA: [1.36, 2.216, 6.085], skyGap: [0.516, 1.058, 3.671], skyB: [1.175, 1.078, 0.921],   // behind the cloud: the glare #f2f5fa, the pale sky it clears to #dae6f8, and warm #eae6de
+  litA: [2.277, 3.526, 8.358], litB: [3.238, 3.182, 3.166],         // the lit side of the cloud: #f9fafb cool, #fbf9f5 warm
+  shadeA: [0.428, 0.603, 1.27], shadeB: [0.774, 0.69, 0.584],       // its shaded side: #c4d0e8 cool, #dcd6cc warm
+  fogA: [1.194, 1.722, 4.272], fogB: [1.868, 1.738, 1.534],         // what it clears to: the sheet #eef1f8, then the paper #f4f1eb
+  cWash: [0.113, 0.701, 3.002] };                                   // Global's blue thinned out: #b0d8f8
+/* a bright field also glows (post.js adds its whole glow chain back on top), so each colour is turned down by what the
+   glow will add to it; gain is the chain's length times its strength, nothing where the glow is off */
+function underGlow(C, gain) {
+  let c = C; if (!gain) return c;
+  for (let n = 0; n < 24; n++) { const br = Math.max(c[0], c[1], c[2], 1e-4), soft = Math.min(0.9, Math.max(0, br - 0.45)) ** 2 / 1.8, w = Math.max(soft, br - 0.9) / br; c = C.map(v => v / (1 + gain * w)); }
+  return c;
+}
+function makeDown({ scene, mesh, mat, small, lite }) {
+  const gain = lite ? 0 : (small ? 4 : 6) * 0.16;
+  const u = { time: { value: 0 }, aspect: { value: 1 }, grainK: { value: 0.012 }, light: { value: new THREE.Vector2(-0.62, 0.78) } };
+  ['blue', 'white', 'depth', 'decks', 'gap', 'soften', 'fog', 'warm', 'wash'].forEach(k => { u[k] = { value: 0 }; });
+  for (const k in TINT) u[k] = { value: new THREE.Vector3(...underGlow(TINT[k], gain)) };
+  const defines = { LAYERS: 6, OCT: small ? 4 : 5 }; if (!(small && lite)) defines.WARP = small ? '0.4' : '0.55';
+  const dmat = new THREE.ShaderMaterial({ uniforms: u, vertexShader: VS, fragmentShader: DOWN_FS, defines, transparent: true, depthTest: false, depthWrite: false });
+  const d = { u, mat: dmat, at: -1 };
+  /* the one triangle wears this picture on the frames the way down asked for, and the shared one on every other */
+  scene.onBeforeRender = () => { mesh.material = d.at === mat.uniforms.time.value ? dmat : mat; };
+  return d;
+}
+let down = null;                                                   // made the first time the way down is on screen
+const c01 = v => Math.min(1, Math.max(0, v)), ss = (v, a, b) => { const t = c01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
+/* e: progress through the investment-focus scene, negative while the dive is still arriving. The page's own sheet and
+   words keep time with these same numbers (main.js): the bar turns light at 0.028, as the white reaches the top of
+   the screen; the sheet comes in from 0.20 to 0.275 and goes from 0.69 to 0.77; the page lays its paper over the last
+   of it from 0.80 to 0.95, rising from the foot of the screen, and the journey itself comes up under that from 0.86. */
+function goDown(e, time, aspect, c) {
+  const d = down || (down = makeDown(c)), u = d.u, st = c.st; d.at = st.downAt = time;
+  const dive = st.dive === undefined ? 1 : st.dive;                // how far the dive at Global has got (world.js passes it on)
+  /* the blue closes as the planet comes to fill the screen, and is shut by the time the scene pins whatever the dive is doing */
+  const blue = Math.max(Math.min(ss(dive, 0.86, 0.995), ss(e, -0.19, -0.02)), ss(e, 0, 0.06)), second = e > 0.5;
+  u.time.value = time; u.aspect.value = aspect;
+  u.blue.value = blue; u.white.value = ss(e, -0.01, 0.095) * blue * blue;
+  u.depth.value = second ? 2.4 + c01((e - 0.67) / 0.27) * 2.1 : -0.2 + c01((e - 0.03) / 0.23) * 2.1;
+  u.decks.value = second ? 1 : ss(e, 0.045, 0.105); u.gap.value = second ? 0.5 : ss(e, 0.055, 0.13); u.soften.value = second ? 0.1 : 0;
+  u.fog.value = second ? Math.max(1 - ss(e, 0.69, 0.765), ss(e, 0.86, 0.95)) : ss(e, 0.195, 0.265);
+  u.warm.value = ss(e, 0.75, 0.87); u.wash.value = ss(e, 0.69, 0.76) * (1 - ss(e, 0.78, 0.87)) * 0.7;
+  st.veil = ss(e, 0.8, 0.95);                                      // the page's paper rises over the last of it
+  st.flat = blue;                                                  // inside Global's air the light is even: the lens stops darkening the corners
+  st.on = blue > 0.002 && e < 1.002 && !(e > 0.28 && e < 0.685);
 }

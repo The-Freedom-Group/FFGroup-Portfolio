@@ -40,10 +40,13 @@ const rocket = el('span.rk', { 'aria-hidden': 'true' }); { const s = svg('svg', 
 const railItems = parts.map(s => { const li = el('li', null, el('a', { href: '#' + s.id, 'aria-label': s.no + ' ' + s.name }, el('span', { text: s.name }), el('i'))); railOl.append(li); return li; });
 rail.append(railOl, rocket);
 
+/* where a move to a part lands: its top, or, where the part says so (data-land), that far through its pinned scene, so a
+   link to the investment focus arrives on the screen itself and not in the cloud before it */
+const landAt = s => Math.round(s.top + (+s.sec.dataset.land || 0) * Math.max(0, s.h - vh));
 /* a move to another part: glide when it is near, cut through black when it is far */
 const flash = $('#flash');
 function goTo(id) {
-  const s = byId[id]; if (!s) return; measure(); const y = Math.round(s.top); const far = Math.abs(y - scrollY) > vh * 2.5;
+  const s = byId[id]; if (!s) return; measure(); const y = landAt(s); const far = Math.abs(y - scrollY) > vh * 2.5;
   if (!far || STILL) { scrollTo({ top: y, behavior: STILL ? 'auto' : 'smooth' }); return; }
   flash.style.background = '#101010'; flash.style.transition = 'opacity .22s'; flash.style.opacity = 1;
   setTimeout(() => { scrollTo({ top: y, behavior: 'instant' }); syS = y; setTimeout(() => { flash.style.transition = 'opacity .5s'; flash.style.opacity = 0; }, 90); }, 230);
@@ -90,8 +93,14 @@ function drive() {
   /* 01: the system comes up, six stops, then the dive */
   const sysIn = byId.system.on ? span(byId.system.pe, -0.02, 0.035) * (1 - span(S, 0.875, 0.93)) : 0; setOT(sysEl, sysIn, 0); sysEl.style.visibility = sysIn < 0.004 ? 'hidden' : 'visible';
   setSysStep(S <= 0 || S > 0.9 ? (S > 0.9 ? -1 : 0) : clamp(Math.floor((S - SYS_A) / (SYS_B - SYS_A) * SYS.length), 0, SYS.length - 1));
-  /* the way down: the investment focus rides the clouds */
-  k = span(F, 0.06, 0.2); const out = span(F, 0.6, 0.76); setOT(focusBox, k * (1 - out), 0); focusBox.style.transform = `translate(-50%,calc(-50% + ${(70 * (1 - k) - 120 * out).toFixed(1)}px))`;
+  /* the way down: cloud clears to Freedom Global's light sheet (w-clouds.js keeps the same times), the words arrive, the screen holds, then it rides up into the next cloud */
+  { const m = drive.fo || (drive.fo = {}), put = (n, v) => { if (m[n] !== v) byId.focus.sec.style.setProperty('--' + n, m[n] = v); };
+    k = span(F, 0.255, 0.345); const up = smooth((F - 0.6) / 0.16), o = k * (1 - span(F, 0.665, 0.755));
+    put('sheet', (span(F, 0.2, 0.275) * (1 - span(F, 0.69, 0.77))).toFixed(3)); put('orbk', (span(F, 0.23, 0.31) * (1 - span(F, 0.585, 0.675))).toFixed(3)); put('wash', o.toFixed(2));
+    put('zoom', (lerp(0.86, 1.16, clamp((F - 0.19) / 0.4)) + span(F, 0.575, 0.69) * 0.4).toFixed(4)); put('rise', (-up * vh * 0.18).toFixed(1) + 'px');   /* the planet draws near through the hold, then swells and thins as the screen leaves */
+    const over = byId.focus.on ? Math.max(0, focusBox.offsetHeight - (vh - 88)) : 0;      /* on a screen too short for the whole box it pans through its hold, as a page would */
+    focusBox.style.opacity = o.toFixed(3); focusBox.style.visibility = o < 0.004 ? 'hidden' : 'visible'; focusBox.style.pointerEvents = o < 0.4 ? 'none' : ''; focusBox.classList.toggle('on', k > 0.6);
+    focusBox.style.transform = `translate3d(-50%,calc(-50% + ${(58 * (1 - k) + over * (0.5 - span(F, 0.37, 0.58)) - up * vh * 0.6).toFixed(1)}px),0) scale(${(0.985 + 0.015 * k).toFixed(4)})`; }
   /* 05: the map */
   setOT(mp, byId.map.on ? span(byId.map.pe, -0.03, 0.04) * (1 - span(M, 0.955, 1.0)) : 0, 0);
   if (performance.now() - mpHold > 900) setPin(M < 0.04 || !byId.map.on ? -1 : clamp(Math.floor((M - MAP_A) / (MAP_B - MAP_A) * mpItems.length), 0, mpItems.length - 1), true);
@@ -126,7 +135,7 @@ function frame(now) {
   const mid = syS + vh * 0.5; let part = parts[0]; for (const s of parts) if (mid >= s.top) part = s;
   if (part !== curPart) { curPart = part; $('#nvNo').textContent = part.no; $('#nvName').textContent = part.name; railItems.forEach((li, i) => li.classList.toggle('on', parts[i] === part)); $$('.nv-links a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + part.id)); if (sound) sound.act(part.id); }
   const under = sections.find(s => syS + 32 >= s.top && syS + 32 < s.top + s.h) || sections[0];
-  let theme = under.sec.classList.contains('night') ? 'night' : under.theme; if (under.id === 'focus' && GL) theme = under.p > 0.86 ? 'light' : 'dark'; if (!GL && theme === 'dark') theme = 'night';
+  let theme = under.sec.classList.contains('night') ? 'night' : under.theme; if (under.id === 'focus' && GL) theme = under.p > 0.028 ? 'light' : 'dark'; if (!GL && theme === 'dark') theme = 'night';
   if (theme !== navTheme) { navTheme = theme; body.dataset.nav = theme; }
   { const i = parts.indexOf(part), nx = parts[i + 1]; const f = nx ? clamp((mid - part.top) / Math.max(1, nx.top - part.top)) : clamp((mid - part.top) / Math.max(1, part.h)); const a = railItems[i], b = railItems[i + 1] || a;
     rocket.style.transform = `translateY(${(lerp(a.offsetTop, b.offsetTop, f) + a.offsetHeight / 2).toFixed(1)}px)`; }
@@ -137,7 +146,7 @@ function frame(now) {
     if (byId.top.p < 0.14 || !slot.r) { const o = markO.getBoundingClientRect(); slot.x = o.left + o.width / 2; slot.y = o.top + o.height / 2; slot.r = o.width / 2; markW = markMain.getBoundingClientRect().width; }
     if (byId.system.on || byId.top.on) sysRoom(); if (byId.map.on) mapRoom(); if (byId.liftoff.on) padRoom();
     world.update({ top: byId.top, system: byId.system, focus: byId.focus, map: byId.map, raise: byId.raise, liftoff: byId.liftoff, sysStep, sysWorlds: sysStep >= 0 ? SYS[sysStep].worlds : [], pin: mpPin, slot, markW, room, globeRoom, pad: padRooms, skyTurn: syS / Math.max(1, vh) * 0.04 }, dt, now / 1000);
-    veilPaper.style.opacity = world.veil.toFixed(3);
+    veilPaper.style.setProperty('--v', world.veil.toFixed(3));   /* how far the paper has risen over the last of the cloud */
     placeTags();
   }
   requestAnimationFrame(frame);
@@ -185,7 +194,7 @@ loBtn.addEventListener('click', async () => {
 
 /* ───────── start ───────── */
 const ldPct = $('#ldPct'), ldText = $('#ldText');
-function loaded() { html.classList.remove('booting'); counters($('#kpis'), true); if (location.hash && byId[location.hash.slice(1)] && location.hash !== '#top') { measure(); scrollTo({ top: byId[location.hash.slice(1)].top, behavior: 'instant' }); syS = scrollY; } }
+function loaded() { html.classList.remove('booting'); counters($('#kpis'), true); if (location.hash && byId[location.hash.slice(1)] && location.hash !== '#top') { measure(); scrollTo({ top: landAt(byId[location.hash.slice(1)]), behavior: 'instant' }); syS = scrollY; } }
 async function start() {
   measure(); addEventListener('resize', measure); if ('ResizeObserver' in window) new ResizeObserver(measure).observe($('#main'));
   /* a phone turned on its side (or back): the page is laid out differently, so start it again where the reader was */
