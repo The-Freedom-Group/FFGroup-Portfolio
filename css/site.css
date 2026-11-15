@@ -8,8 +8,9 @@
 @font-face{font-family:"IBM Plex Mono";src:url(../fonts/ibm-plex-mono-400.woff2) format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:"IBM Plex Mono";src:url(../fonts/ibm-plex-mono-500.woff2) format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Michroma";src:url(../fonts/michroma-400.woff2) format("woff2");font-weight:400;font-display:swap}
-/* the two faces of the earlier portfolio, kept for the places that carry its look (the Freedom Global screen, figures) */
-@font-face{font-family:"Manrope";src:url(../fonts/manrope-var.woff2) format("woff2");font-weight:400 800;font-display:swap}
+/* the earlier portfolio's figure face, kept for the places that carry its look (the Freedom Global screen, figures).
+   Its text face never loaded (the embedded Manrope was not a valid font), so what people saw was the system face:
+   --old names that stack. */
 @font-face{font-family:"Orbitron";src:url(../fonts/orbitron-var.woff2) format("woff2");font-weight:400 900;font-display:swap}
 
 :root{
@@ -29,7 +30,7 @@
   /* the earlier portfolio's accents (the three bodies of the logo and the company colours), for figures and the system */
   --o-pink:#ff3d9a; --o-blue:#38a9ff; --o-mint:#2fe0a0; --o-ember:#ff6a3d; --o-gold:#d7b35f; --o-violet:#a487df; --o-amber:#fbbf24; --o-slate:#94a3b8;
   --o-grad:linear-gradient(92deg,var(--o-pink) 0%,var(--o-blue) 55%,var(--o-mint) 100%);
-  --old:"Manrope","Inter",system-ui,sans-serif; --orb:"Orbitron","Michroma",system-ui,sans-serif;
+  --old:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; --orb:"Orbitron","Michroma",system-ui,sans-serif;
 }
 .grad{background:var(--o-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .paper{ --bg:var(--porcelain); --fg:#101010; --fg2:#4A4A46; --fg3:#6E6C66; --line:#DAD5CB; --line2:#BDB7AB; --plate:var(--sheet); --hot:var(--pink); --hot-t:var(--pink-3); }
