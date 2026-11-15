@@ -43,7 +43,6 @@ void main(){
 }`;
 
 /* the sky of the way down. Colours are scene-linear and go through the same finish as everything else. */
-const DOWN = { airA: [0.07, 0.19, 0.4], airB: [0.42, 0.58, 0.78], cLit: [1.14, 1.1, 1.04], cShade: [0.46, 0.52, 0.64], cFog: [0.9, 0.86, 0.8], light: [-0.62, 0.78], rim: 0 };
 
 /* The climb (the raise) has its own, quieter cloud, drawn over the evening sky of the launch pad's world, so the moon and
    the dusk behind it are the real ones. It starts under a deck of cloud, rises into it (the frame fills with mist) and

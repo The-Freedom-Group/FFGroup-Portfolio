@@ -1,7 +1,7 @@
 /* Space: the group's mark alive in three dimensions (the pink globe on its orbit, with the three bodies of the logo),
    which is pulled away to a point, blows as a nova and comes back as the whole Freedom system, laid out as the group's
-   hierarchy; then the dive at Freedom Global. The same globe, close up, is the expansion map: nine pins and their routes
-   home to Bury. And the same sky stands behind the night sheets.
+   hierarchy; then the dive at Freedom Global. The same sky stands behind the night sheets and behind the expansion
+   map, which has a globe of its own (w-globe.js).
    The camera never cuts inside this module: every view is a pose (what it looks at, from where, how far, and where on
    the screen that point sits) and the camera eases from pose to pose. */
 import * as THREE from 'three';
@@ -35,9 +35,6 @@ const STROKE = [[0, 0.026, 1, '#ff3ecc'], [12, 0.0262, 1, '#fe3ecc'], [30, 0.029
   [204, 0.0112, 1, '#ff6ce0'], [214, 0.0102, 0.9, '#ff8eea'], [222, 0.0096, 0.5, '#ffa5ef'], [229, 0.008, 0, '#ffa5ef'], [261, 0.004, 0, '#ff93ed'], [266, 0.006, 0.6, '#ff93ed'], [272, 0.0078, 1, '#ff93ed'], [284, 0.0105, 1, '#ff91ea'], [294, 0.0148, 1, '#ff8fe5'],
   [306, 0.0186, 1, '#ff73dc'], [318, 0.0218, 1, '#ff56d3'], [330, 0.0238, 1, '#ff43cd'], [342, 0.0248, 1, '#ff3bc9'], [360, 0.026, 1, '#ff3ecc']];
 
-/* the nine territories: [longitude, latitude] of the place the pin stands on */
-export const PINS = [[-2.3, 53.6], [19.4, 52], [4.5, 50.6], [12.5, 42], [35, 39], [114, 34], [74.5, 32.5], [121, 23.8], [101.7, 3.2]];
-const onGlobe = (lon, lat, r) => V(Math.cos(lat * DEG) * Math.cos(lon * DEG), Math.sin(lat * DEG), -Math.cos(lat * DEG) * Math.sin(lon * DEG)).multiplyScalar(r);
 
 const RIG_VS = `attribute vec4 tint; varying vec4 vC; varying vec3 vN; void main(){ vC = tint; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const RIG_FS = `uniform float k; uniform float charge; uniform vec3 light; varying vec4 vC; varying vec3 vN;
@@ -57,7 +54,6 @@ export function createOrbit({ renderer, small, dpr, spec }) {
   ids.forEach(id => { const w = makeWorld(WORLDS[id], sunPos, { seg: small ? 96 : 144 }); w.group.position.set(...WORLDS[id].pos); w.k = id === 'enterprise' ? 1 : 0; w.sat = 1; w.gain = 1; w.size = 1; scene.add(w.group); worlds[id] = w;
     radii[id] = { R: w.R, wide: id === 'form' ? 1.75 : id === 'fuel' ? 1.25 : 1 }; });
   const ent = worlds.enterprise, R = ent.R, entTilt = WORLDS.enterprise.tilt;
-  const entClouds = ent.spin.children.find(c => c.material && c.material.uniforms && c.material.uniforms.cloudTint);
   ent.spin.rotation.y = -Math.PI / 2 + 38 * DEG;                                 // the Atlantic to the front, as on the logo
 
   /* the system's rings, lanes and nova */
@@ -86,31 +82,15 @@ export function createOrbit({ renderer, small, dpr, spec }) {
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: softDisc(128, [[0, 'rgba(255,61,154,.6)'], [0.42, 'rgba(255,61,154,.2)'], [1, 'rgba(255,61,154,0)']]), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 })); glow.visible = false; scene.add(glow);
   const bodies = BODIES.map(b => { const m = new THREE.Mesh(new THREE.SphereGeometry(b.r / MK.a, 48, 32), new THREE.MeshStandardMaterial({ color: b.c, roughness: 0.3, metalness: 0.05, emissive: b.e, emissiveIntensity: 1.2 })); m.userData = b; rig.add(m); return m; });
 
-  /* the pins and their routes, on the globe */
-  const pinGroup = new THREE.Group(); ent.spin.add(pinGroup); pinGroup.visible = false;
-  const pinMat = (c) => new THREE.MeshBasicMaterial({ color: c });
-  const pins = PINS.map(([lon, lat], i) => {
-    const p = onGlobe(lon, lat, R * 1.004), g = new THREE.Group(); g.position.copy(p); g.quaternion.setFromUnitVectors(V(0, 1, 0), p.clone().normalize()); pinGroup.add(g);
-    const c = i === 5 ? 0x5fe0a0 : i === 0 ? 0xf4f1eb : 0xff2d8d;
-    const dot = new THREE.Mesh(new THREE.SphereGeometry(R * 0.012, 16, 12), pinMat(c)); g.add(dot);
-    const halo = new THREE.Mesh(new THREE.RingGeometry(R * 0.022, R * 0.027, 40), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false })); halo.rotation.x = -Math.PI / 2; halo.position.y = R * 0.002; g.add(halo);
-    let arc = null, n = 0;
-    if (i > 0) { const a = onGlobe(lon, lat, 1), b = onGlobe(PINS[0][0], PINS[0][1], 1), ang = a.angleTo(b), lift = 0.02 + ang * 0.2, pts = [];
-      for (let k = 0; k <= 48; k++) { const t = k / 48; pts.push(a.clone().lerp(b, t).normalize().multiplyScalar(R * (1.004 + Math.sin(t * Math.PI) * lift))); }
-      const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 96, R * 0.0032, 6, false); n = geo.index.count;
-      arc = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.85 })); arc.geometry.setDrawRange(0, 0); pinGroup.add(arc); }
-    return { g, dot, halo, arc, n, k: 0, lon, lat, local: p };
-  });
-
   /* ───────── poses ───────── */
   const cur = { target: V(), dir: V(0, 0.42, 1).normalize(), dist: 700, ox: 0, oy: 0 }, want = { target: V(), dir: V(), dist: 700, ox: 0, oy: 0 };
-  const dirHero = V(0, 0.3, 1).normalize(), dirSys = V(0, Math.sin(SYS_EL), Math.cos(SYS_EL)), dirDock = V(0, Math.sin(SYS_EL + 9 * DEG), Math.cos(SYS_EL + 9 * DEG)), dirGlobe = V(0, 0.2, 1).normalize();
+  const dirHero = V(0, 0.3, 1).normalize(), dirSys = V(0, Math.sin(SYS_EL), Math.cos(SYS_EL)), dirDock = V(0, Math.sin(SYS_EL + 9 * DEG), Math.cos(SYS_EL + 9 * DEG));
   /* the first screen's plane: it faces the opening's camera, and tips back about the globe as it is pulled away */
   const heroQ = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(dirHero, V(), V(0, 1, 0))), planeQ = new THREE.Quaternion(), tipQ = new THREE.Quaternion(), leanQ = new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), MK.lean), eul = new THREE.Euler();
   const tmp = V(), tmp2 = V(), e1 = V(), right = V(), up = V(), px = V(), py = V(), pc = V();
-  let W = innerWidth, H = innerHeight, snap = true, novaPrimed = 0, intro = 0, introBodies = 0, globeYaw = -Math.PI / 2 - PINS[0][0] * DEG, pinsOn = 0, sol = null, solKey = '';
-  const out = { worlds: {}, years: [], pins: [], hero: new Array(16).fill(0), heroOk: false, dive: 0, focus: 0 };
-  ids.forEach(id => { out.worlds[id] = { x: 0, y: 0, r: 0, a: 0 }; }); YEARS.forEach(() => out.years.push({ x: 0, y: 0, a: 0 })); PINS.forEach(() => out.pins.push({ x: 0, y: 0, a: 0, left: false }));
+  let W = innerWidth, H = innerHeight, snap = true, novaPrimed = 0, intro = 0, introBodies = 0, sol = null, solKey = '';
+  const out = { worlds: {}, years: [], hero: new Array(16).fill(0), heroOk: false, dive: 0, focus: 0 };
+  ids.forEach(id => { out.worlds[id] = { x: 0, y: 0, r: 0, a: 0 }; }); YEARS.forEach(() => out.years.push({ x: 0, y: 0, a: 0 }));
 
   function resize(w, h) { W = w; H = h; camera.aspect = w / h; camera.updateProjectionMatrix(); snap = true; }
   const distFor = rpx => R * H / (2 * Math.max(4, rpx) * TANH);            // how far back to stand for the globe to be rpx pixels in radius
@@ -122,7 +102,7 @@ export function createOrbit({ renderer, small, dpr, spec }) {
     return sol;
   }
 
-  /* s: what the page knows (see world.js); mode: 'orbit' | 'sky' | 'globe' */
+  /* s: what the page knows (see world.js); mode: 'orbit' | 'sky' */
   function update(s, dt, time, mode) {
     const A = s.top, B = s.system, Y = s.sys, focal = H / (2 * TANH);     // A, B: progress through the two orbit sections, running on past either end; Y: the opening and the system as the page drives them (sysmap.js)
     const dive = mode === 'orbit' ? ease((B.x - (B.len - DIVE_LEAD)) / DIVE_SPAN) : 0;
@@ -133,12 +113,6 @@ export function createOrbit({ renderer, small, dpr, spec }) {
     if (mode === 'sky') {
       const yaw = 2.2 + time * 0.006 + s.skyTurn * 0.5, pitch = 0.3; tmp.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
       want.target.set(0, 2600, 600).addScaledVector(tmp, 1000); want.dir.copy(tmp).negate(); want.dist = 1000; want.ox = 0; want.oy = 0;
-    } else if (mode === 'globe') {
-      const M = s.map, inn = span(M.pe, -1 / M.len, 0.05), outK = span(M.pe, 0.95, 1 + 0.8 / M.len);
-      /* the globe is fitted to the room the page gives it */
-      const g = s.globeRoom, rpx = Math.max(60, Math.min(g.x1 - g.x0, g.y1 - g.y0) * (W < 900 ? 0.46 : 0.45));
-      want.target.set(0, 0, 0); want.dir.copy(dirGlobe); want.dist = distFor(rpx) * (1 + outK * 2.2);
-      want.ox = (g.x0 + g.x1) / 2 - W / 2; want.oy = (g.y0 + g.y1) / 2 - H / 2 + (1 - inn) * H * 0.75 - outK * H * 0.9;
     } else {
       /* the mark → pulled away to the hole → the nova → the newborn planet low in the middle → up to its place in the system → the dive at Global */
       const E = Y.slots.enterprise, heroDist = distFor(Y.slot.r), k1 = smooth(bh), k2 = span(nv, 0.58, 0.94), k3 = Y.pose;
@@ -156,8 +130,8 @@ export function createOrbit({ renderer, small, dpr, spec }) {
     if (Math.abs(cur.ox) > 0.5 || Math.abs(cur.oy) > 0.5) camera.setViewOffset(W, H, -cur.ox, -cur.oy, W, H); else camera.clearViewOffset();
     camera.updateMatrixWorld(); right.setFromMatrixColumn(camera.matrixWorld, 0); up.setFromMatrixColumn(camera.matrixWorld, 1);
 
-    /* light: the sun where it always is, except at the map, where it stands over the viewer's shoulder */
-    if (mode === 'globe') sunPos.copy(camera.position).addScaledVector(right, -cur.dist * 0.55).addScaledVector(up, cur.dist * 0.45).sub(cur.target).normalize().multiplyScalar(6000).add(cur.target); else sunPos.copy(sunHome);
+    /* light: the sun where it always is */
+    sunPos.copy(sunHome);
     key.position.copy(sunPos).normalize();
 
     /* the worlds: Enterprise always; each company at its place on its ring, the size its place asks for, once the story
@@ -175,9 +149,7 @@ export function createOrbit({ renderer, small, dpr, spec }) {
       } else { w.size = mode === 'orbit' ? assembly : 1; w.group.scale.setScalar(Math.max(0.0001, w.size)); }
       const on = !lit || lit.includes(id), bright = lit && on && id !== 'enterprise', sat = on ? (bright ? 1.12 : 1) : id === 'enterprise' ? 0.34 : 0.08, gain = on ? (bright ? 1.25 : 1) : id === 'enterprise' ? 0.62 : 0.44;   // Enterprise keeps a little of its pink: it is what the others hang from
       w.sat += (sat - w.sat) * kL; w.gain += (gain - w.gain) * kL; w.look.sat.value = w.sat; w.look.gain.value = w.gain; w.update(dt, time); });
-    if (mode === 'globe') { ent.group.rotation.set(0.5, 0, 0.08); const yawTo = s.pin >= 0 ? -Math.PI / 2 - PINS[s.pin][0] * DEG + (W < 900 ? 0 : 0.12) : -Math.PI / 2 - 20 * DEG; let d = yawTo - globeYaw; d = Math.atan2(Math.sin(d), Math.cos(d)); globeYaw += d * (1 - Math.exp(-dt * 2.6)); ent.spin.rotation.y = globeYaw; }
-    else { ent.group.rotation.set(0, 0, entTilt); globeYaw = ent.spin.rotation.y; }
-    if (entClouds) entClouds.visible = mode !== 'globe';
+    ent.group.rotation.set(0, 0, entTilt);
 
     /* the first screen's plane, about the globe: where the mark's orbit lies, and what the page's own sheet is glued to */
     const rigK = mode === 'orbit' ? 1 - span(bh, 0.9, 1) : 0, kpx = R / Math.max(1, Y.slot.r) * assembly;     // kpx: world units to a pixel of the first screen
@@ -206,7 +178,7 @@ export function createOrbit({ renderer, small, dpr, spec }) {
     /* the sky and the dust */
     stars.material.uniforms.time.value = time;
     space.update(dt, time, { map: 0, rings: 0, focus: cur.dist, blur: 0.3, belt: time * 0.0045 });
-    space.fine.visible = false; space.dust.visible = mode !== 'globe';
+    space.fine.visible = false; space.dust.visible = true;
 
     /* the system's own drawing: rings, lanes, year marks, the nova */
     const pr = sys.frame(time, showSys ? Y.keep : null, H), sysK = mode === 'orbit' ? 1 - span(dive, 0.02, 0.3) : 0, e0 = out.worlds.enterprise;
@@ -223,19 +195,10 @@ export function createOrbit({ renderer, small, dpr, spec }) {
     if (!nova.visible && novaPrimed < 3 && showSys && intro >= 1 && bh < 0.01) { novaPrimed++; nova.visible = true; nova.material.uniforms.p.value = 0; }   /* drawn dark a few times at the start, for the same reason as the worlds */
     else if (nova.visible) { const u = nova.material.uniforms; u.p.value = nv; u.c0.value.set(Y.hole.x * pr, (H - Y.hole.y) * pr); u.c1.value.set(e0.x * pr, (H - e0.y) * pr); }
 
-    /* the map's pins: in view when they face the viewer; their routes draw as the story reaches them */
-    pinGroup.visible = mode === 'globe'; pinsOn += ((mode === 'globe' ? 1 : 0) - pinsOn) * (1 - Math.exp(-dt * 4));
-    if (mode === 'globe') pins.forEach((p, i) => {
-      const reached = s.pin >= i || i === 0; p.k += ((reached ? 1 : 0) - p.k) * (1 - Math.exp(-dt * 2.2));
-      if (p.arc) { p.arc.geometry.setDrawRange(0, Math.floor(p.n * p.k / 3) * 3); p.arc.material.opacity = s.pin === i ? 0.95 : 0.4; }
-      const on = s.pin === i; p.dot.scale.setScalar(on ? 1.7 : 1); const u = (time * 0.6 + i * 0.37) % 1; p.halo.scale.setScalar(on ? 1 + u * 2.4 : 1); p.halo.material.opacity = on ? (1 - u) * 0.95 : 0.55;
-      tmp2.copy(p.local); p.g.parent.localToWorld(tmp2); const o = out.pins[i]; const facing = tmp.copy(tmp2).sub(ent.group.position).normalize().dot(e1.copy(camera.position).sub(tmp2).normalize());
-      const ok = project(tmp2, o); const cxp = W / 2 + cur.ox; o.left = o.x < cxp; o.x += o.left ? -12 : 12; o.a = ok ? clamp((facing - 0.12) * 6) * pinsOn * (W < 900 ? (on ? 1 : 0) : 1) : 0;
-    }); else out.pins.forEach(o => { o.a = 0; });
     out.dive = dive; out.focus = cur.dist;
   }
 
   return { scene, camera, update, resize, out, space, stars, worlds, sys,
     snap() { snap = true; }, setIntro(k, b) { intro = k; introBodies = b; }, setDpr(v) { stars.material.uniforms.pr.value = v; space.setDpr(v); },
-    warm() { const vis = []; scene.traverse(o => { if (o.visible === false) { vis.push(o); o.visible = true; } }); ids.forEach(id => worlds[id].group.scale.setScalar(1)); ring.geometry.setDrawRange(0, RING_N); pins.forEach(p => p.arc && p.arc.geometry.setDrawRange(0, p.n)); renderer.compile(scene, camera); vis.forEach(o => { o.visible = false; }); } };
+    warm() { const vis = []; scene.traverse(o => { if (o.visible === false) { vis.push(o); o.visible = true; } }); ids.forEach(id => worlds[id].group.scale.setScalar(1)); ring.geometry.setDrawRange(0, RING_N); renderer.compile(scene, camera); vis.forEach(o => { o.visible = false; }); } };
 }

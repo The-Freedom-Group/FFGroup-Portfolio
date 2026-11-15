@@ -103,8 +103,13 @@ export function initSystem({ byId, onStep }) {
     pinned = null; scrollTo({ top: B.top + (famEnd(co) - 0.05 - 1) * beatLen * vh, behavior: 'smooth' });                    // not there yet: go to where it arrives
   }
   board.addEventListener('click', e => { const t = e.target.closest('[data-pick], .fam'); if (!t) { pinned = null; return; } if (e.target.closest('a')) return; pick(t.dataset.pick || t.closest('.co').dataset.co); });
-  const over = e => { const t = e.target.closest && e.target.closest('[data-pick], .fam'); if (e.pointerType !== 'mouse') return; clearTimeout(hoverT); if (t) hover = t.dataset.pick || t.closest('.co').dataset.co; else hoverT = setTimeout(() => { hover = null; }, 140); };
+  /* pointing at a company lights it, but only when the pointer itself has moved: a card that the scroll carries under a
+     resting pointer must not take the light from the company the story has just reached */
+  let mx = -1, my = -1, movedAt = -1e9;
+  const over = e => { const t = e.target.closest && e.target.closest('[data-pick], .fam'); if (e.pointerType !== 'mouse' || performance.now() - movedAt > 250) return; clearTimeout(hoverT); if (t) hover = t.dataset.pick || t.closest('.co').dataset.co; else hoverT = setTimeout(() => { hover = null; }, 140); };
+  board.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' || (e.clientX === mx && e.clientY === my)) return; mx = e.clientX; my = e.clientY; movedAt = performance.now(); over(e); });
   board.addEventListener('pointerover', over); board.addEventListener('pointerleave', () => { clearTimeout(hoverT); hover = null; });
+  addEventListener('scroll', () => { if (hover && performance.now() - movedAt > 250) { clearTimeout(hoverT); hover = null; } }, { passive: true });
   addEventListener('keydown', e => { if (e.key === 'Escape') pinned = null; });
 
   const setOT = (r, v) => { if (Math.abs(v - r.last) < 0.0015) return; r.last = v; const st = r.el.style; st.opacity = v >= 0.999 ? '' : v.toFixed(3); st.visibility = v < 0.004 ? 'hidden' : ''; st.transform = r.fx === 'rise' && v < 0.999 ? `translate3d(0,${((1 - v) * 14).toFixed(1)}px,0)` : ''; };
