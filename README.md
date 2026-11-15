@@ -45,7 +45,8 @@ No build step and no dependencies to install: plain HTML, CSS and JavaScript mod
   (the cloud on the way down and the way up), `js/w-pad.js` (the launch pad and the burn).
 - `js/planets.js`, `js/space.js`, `js/post.js`, `js/quality.js`, `js/util.js`, `js/cursor.js`, `js/type.js`,
   `js/worlds.js` · shared with the group system site.
-- `js/sound.js` · sound made in the browser, off until asked for.
+- `js/sound.js` · the galaxy sound, made in the browser with no audio files. It starts quietly on the visitor's first
+  press or key (a browser allows nothing sooner); the speaker in the bar turns it off and on, and the choice is kept.
 
 Pinned scenes are tall sections with a stage that stays put; the page hands the world the room each scene has free
 (beside the words on a wide screen, between them on a phone) and the world fits itself to it. Where WebGL is missing,
