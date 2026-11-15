@@ -18,7 +18,7 @@ One page that tells the investment story from top to bottom:
 | 08 | The team | Headcount, org chart, by division, by employment type; anyone in full; the roles opening next. |
 | 09 | The raise | What capital unlocks, climbing through cloud at dusk. |
 | 10 | Beyond | What Freedom Global creates, the flywheel, the three scenarios. |
-| 11 | Liftoff | The launch pad. Press for liftoff and the page burns back to the top. |
+| 11 | Liftoff | The launch pad at night: the rocket comes down and stands. Press for liftoff and the page burns back to the top. |
 
 ## Changing a figure, a chapter or a person
 
@@ -42,7 +42,8 @@ No build step and no dependencies to install: plain HTML, CSS and JavaScript mod
   world and the chrome where the story is.
 - `js/journey.js`, `js/charts.js`, `js/crew.js` · the chapters, the figures (SVG drawn at the size shown), the team.
 - `js/world.js` · the renderer and the film finish; `js/w-orbit.js` (mark, system, map, night sky), `js/w-clouds.js`
-  (the cloud on the way down and the way up), `js/w-pad.js` (the launch pad and the burn).
+  (the cloud on the way down and the way up), `js/w-pad.js` (the evening sky behind the last three parts, the launch
+  pad, the rocket's arrival and the burn).
 - `js/planets.js`, `js/space.js`, `js/post.js`, `js/quality.js`, `js/util.js`, `js/cursor.js`, `js/type.js`,
   `js/worlds.js` · shared with the group system site.
 - `js/sound.js` · sound made in the browser, off until asked for.

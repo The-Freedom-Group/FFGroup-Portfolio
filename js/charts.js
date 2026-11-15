@@ -398,23 +398,38 @@ function mix2036(DATA) {
   sized(box, () => segs.forEach(s => s.classList.toggle('fit', s.clientWidth >= 34)));
 }
 
-/* ───────── 10 · the flywheel ───────── */
+/* ───────── 10 · the flywheel: one orbit, drawn as the system draws its own, and the six steps as stops on it ───────── */
 function flywheel() {
   const fig = $('#flyWheel'), steps = $$('#flySteps li'); if (!fig || !steps.length) return; const n = steps.length;
-  const s = svg('svg', { viewBox: '0 0 400 400' }, fig); const R = 150, C = 200;
+  const S = 440, C = S / 2, R = 158, s = svg('svg', { viewBox: `0 0 ${S} ${S}` }, fig), two = i => String(i + 1).padStart(2, '0');
+  /* a planet picture that fails to load leaves its company's coloured disc, never a broken-picture mark (here and in the list of companies above) */
+  const bare = im => { im.removeAttribute('srcset'); im.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='; };   // a clear pixel in its place
+  $$('.by-cos img').forEach(im => { if (im.complete && im.getAttribute('src') && !im.naturalWidth) bare(im); else im.addEventListener('error', () => bare(im), { once: true }); });
+  /* the two steps that open with a company's name stand on that company's planet */
+  const WORLDS = [[/^Strengthens Freedom Group Enterprise/, 'enterprise', '#FF2D8D'], [/^Freedom Global/, 'global', '#6fb6ff']];
   svg('circle', { cx: C, cy: C, r: R, class: 'fw-ring' }, s);
-  const arc = svg('circle', { cx: C, cy: C, r: R, class: 'fw-arc', 'stroke-dasharray': (2 * Math.PI * R / n).toFixed(1) + ' ' + (2 * Math.PI * R).toFixed(1), transform: `rotate(-90 ${C} ${C})` }, s);
-  const big = svg('text', { x: C, y: C + 8, 'text-anchor': 'middle', class: 'fw-big' }, s, '01'); svg('text', { x: C, y: C + 44, 'text-anchor': 'middle', class: 'fw-sub' }, s, 'EACH TURN FUNDS THE NEXT');
-  const nodes = steps.map((li, i) => { const a = -Math.PI / 2 + i / n * Math.PI * 2, g = svg('g', { class: 'fw-node', transform: `translate(${(C + R * Math.cos(a)).toFixed(1)} ${(C + R * Math.sin(a)).toFixed(1)})` }, s);
-    svg('circle', { r: 21 }, g); svg('text', { y: 5, 'text-anchor': 'middle' }, g, String(i + 1).padStart(2, '0')); g.addEventListener('pointerenter', () => { set(i); hold = performance.now(); }); return g; });
-  let cur = -1, hold = 0, timer = 0;
-  function set(i) { cur = i; steps.forEach((li, k) => li.classList.toggle('on', k === i)); nodes.forEach((g, k) => g.classList.toggle('on', k === i)); big.textContent = String(i + 1).padStart(2, '0'); arc.style.transform = `rotate(${-90 + (i - 0.5) * 360 / n}deg)`; }
-  arc.removeAttribute('transform'); arc.style.transformOrigin = `${C}px ${C}px`; arc.style.transition = STILL ? 'none' : 'transform .9s cubic-bezier(.65,0,.35,1)';
+  /* the stretch of the orbit just travelled: it ends on the stop the story is at */
+  const arc = svg('circle', { cx: C, cy: C, r: R, class: 'fw-arc', 'stroke-dasharray': (2 * Math.PI * R / n).toFixed(1) + ' ' + (2 * Math.PI * R).toFixed(1) }, s);
+  arc.style.transformOrigin = `${C}px ${C}px`; arc.style.transition = STILL ? 'none' : 'transform 1.2s cubic-bezier(.65,0,.35,1)';
+  const big = svg('text', { x: C, y: C - 4, 'text-anchor': 'middle', class: 'fw-big' }, s, '01'), said = [0, 1, 2].map(k => svg('text', { x: C, y: C + 28 + k * 16, 'text-anchor': 'middle', class: 'fw-said' }, s));
+  const lines = steps.map(li => { const out = ['']; li.textContent.trim().split(/\s+/).forEach(w => { const l = out[out.length - 1]; if (l && (l + ' ' + w).length > 24) out.push(w); else out[out.length - 1] = l ? l + ' ' + w : w; }); return out; });
+  const stops = steps.map((li, i) => { const a = -Math.PI / 2 + i / n * Math.PI * 2, cx = Math.cos(a), cy = Math.sin(a), w = WORLDS.find(x => x[0].test(li.textContent.trim()));
+    const g = svg('g', { class: 'fw-stop', transform: `translate(${(C + R * cx).toFixed(1)} ${(C + R * cy).toFixed(1)})` }, s);
+    if (w) { svg('circle', { r: 23.5, fill: w[2] }, g); const im = svg('image', { href: `assets/minis/${w[1]}@2x.webp`, x: -25, y: -25, width: 50, height: 50 }, g); im.addEventListener('error', () => im.remove(), { once: true }); svg('circle', { r: 31, class: 'halo' }, g); }
+    else { svg('circle', { r: 15, class: 'hit' }, g); svg('circle', { r: 6, class: 'dot' }, g); }
+    const off = w ? 49 : 27; svg('text', { x: (cx * off).toFixed(1), y: (cy * off + 4).toFixed(1), 'text-anchor': 'middle' }, g, two(i));
+    g.addEventListener('pointerenter', () => { set(i); hold = performance.now(); }); return g; });
+  let cur = -1, turn = 0, hold = 0, timer = 0;
+  function set(i) {
+    if (i === cur) return; let d = cur < 0 ? i : i - cur; if (d > n / 2) d -= n; if (d < -n / 2) d += n; turn += d; cur = i;       // the short way round, and never back through the start
+    steps.forEach((li, k) => li.classList.toggle('on', k === i)); stops.forEach((g, k) => g.classList.toggle('on', k === i));
+    big.textContent = two(i); said.forEach((t, k) => { t.textContent = lines[i][k] || ''; }); arc.style.transform = `rotate(${-90 + (turn - 1) * 360 / n}deg)`;
+  }
   steps.forEach((li, i) => li.addEventListener('pointerenter', () => { set(i); hold = performance.now(); }));
   set(0);
   if (STILL) { steps.forEach(li => li.classList.add('on')); return; }
   const tick = () => { if (performance.now() - hold > 5000) set((cur + 1) % n); };
-  if ('IntersectionObserver' in window) new IntersectionObserver(es => es.forEach(e => { clearInterval(timer); if (e.isIntersecting) timer = setInterval(tick, 1900); }), { threshold: 0.3 }).observe(fig); else timer = setInterval(tick, 1900);
+  if ('IntersectionObserver' in window) new IntersectionObserver(es => es.forEach(e => { clearInterval(timer); if (e.isIntersecting) timer = setInterval(tick, 2600); }), { threshold: 0.3 }).observe(fig); else timer = setInterval(tick, 2600);
 }
 
 export function initCharts(DATA) {

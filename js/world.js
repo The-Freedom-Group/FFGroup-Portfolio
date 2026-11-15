@@ -7,10 +7,11 @@ import { pickQuality, levelSpec, remember } from './quality.js';
 import { maps } from './planets.js';
 import { createOrbit } from './w-orbit.js';
 import { createClouds } from './w-clouds.js';
-import { createPad } from './w-pad.js';
+import { createPad, ARRIVE } from './w-pad.js';
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-const FAMILY = { orbit: 'space', descent: 'space', sky: 'sky', climb: 'sky', globe: 'globe', pad: 'pad' };
+/* the last three parts are one evening in one world: the climb at dusk, the night sky over Beyond ('eve'), the pad */
+const FAMILY = { orbit: 'space', descent: 'space', sky: 'sky', globe: 'globe', climb: 'pad', eve: 'pad', pad: 'pad' };
 
 /* Built at once and drawn from the first frame; `ready` settles when the maps the opening needs have landed. */
 export function createWorld({ canvas, onProgress }) {
@@ -36,23 +37,28 @@ export function createWorld({ canvas, onProgress }) {
     maps.onItem = name => { if (NEED.includes(name)) got.add(name); loadK = got.size / NEED.length; onProgress(Math.min(0.97, loadK), loadK < 0.6 ? 'Plotting the orbit' : 'Lighting the worlds'); if (got.size >= NEED.length) res(); };
     setTimeout(res, 20000);
   }).then(() => { isReady = true; onProgress(1, 'Ready'); });
-  orbit.warm(); (window.requestIdleCallback || (f => setTimeout(f, 1500)))(() => pad.warm());
+  /* the evening's shaders are built while the page is idle, against the target they will be drawn into, so the first sight of the raise does not stall the scroll */
+  orbit.warm(); (window.requestIdleCallback || (f => setTimeout(f, 1500)))(() => { const rt = renderer.getRenderTarget(); renderer.setRenderTarget(post.target); pad.warm(); clouds.warm(renderer); renderer.setRenderTarget(rt); });
 
   /* ───────── which world, and the dip through black between worlds that do not join ───────── */
   let mode = null, shown = null, dipT = 0, veil = null;
   function setMode(m) { mode = m; if (!shown || !m || FAMILY[shown] === FAMILY[m] || FAMILY[shown] === 'space' && false) { swap(); return; } if (!dipT) { dipT = 1; canvas.style.transition = 'opacity .22s'; canvas.style.opacity = 0; setTimeout(() => { swap(); canvas.style.transition = 'opacity .55s'; canvas.style.opacity = 1; dipT = 0; }, 230); } }
-  function swap() { const was = shown; shown = mode; if (shown && (!was || FAMILY[was] !== FAMILY[shown])) { orbit.snap(); } }
+  function swap() { const was = shown; shown = mode; if (shown && (!was || FAMILY[was] !== FAMILY[shown])) { orbit.snap(); pad.snap(); } }
 
   /* ───────── frame ───────── */
-  let introK = 0, introB = 0, frames = 0, acc = 0, calm = 0, late = 0;
+  let introK = 0, introB = 0, frames = 0, acc = 0, calm = 0, late = 0; const sky = { x: 0, y: 0, dusk: 1 };
   function update(s, dt, time) {
     if (!isReady) introK += (loadK * 0.9 - introK) * (1 - Math.exp(-dt * 3));         // while it loads, the orbit closes as far as the loading has got
     orbit.setIntro(introK, introB);
+    pad.out.on = FAMILY[shown] === 'pad';
     if (!shown) return;
-    if (shown === 'pad') { pad.update(s, dt, time); post.st.aperture = 0; post.render(pad.scene, pad.camera, time); }
-    else {
+    if (pad.out.on) {   /* the evening: the pad's own sky and ground, with the cloud of the climb over it while the raise is on screen */
+      pad.update(s, dt, time); sky.x = pad.out.moonX / W; sky.y = pad.out.moonY / H; sky.dusk = pad.out.dusk;
+      clouds.update(s.raise.on ? 'up' : null, s.raise.pe, time, W / H, sky);
+      post.st.aperture = 0; post.render(pad.scene, pad.camera, time, clouds.st.on ? r => clouds.draw(r) : null);
+    } else {
       const fam = FAMILY[shown]; orbit.update(s, dt, time, fam === 'space' ? 'orbit' : fam);
-      clouds.update(fam === 'space' ? 'down' : shown === 'climb' ? 'up' : null, fam === 'space' ? s.focus.pe : s.raise.pe, time, W / H);
+      clouds.update(fam === 'space' ? 'down' : null, s.focus.pe, time, W / H);
       post.render(orbit.scene, orbit.camera, time, clouds.st.on ? r => clouds.draw(r) : null);
     }
     /* the way down comes out into even daylight, so the lens stops darkening the corners there; and it is told how far the dive has got */
@@ -68,6 +74,8 @@ export function createWorld({ canvas, onProgress }) {
 
   return { setMode, update, intro, resize, ready, quality: q, spec,
     get out() { return orbit.out; }, get veil() { return clouds.st.veil; }, get mode() { return shown; },
+    /* the launch rocket on the screen (see `out` in w-pad.js), and the stretch of the liftoff scene over which it arrives */
+    get pad() { return pad.out; }, arriveSpan: ARRIVE,
     launch() { return pad.launch(); }, arrive() { pad.reset(); orbit.snap(); },
     peek() { return { mode: shown, dpr, scale, level: q.level, gpu: q.gpu }; }, dbg: { orbit, pad, clouds, post, renderer } };
 }
