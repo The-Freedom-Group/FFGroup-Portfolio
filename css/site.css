@@ -284,7 +284,8 @@ html.no-gl .mark-flat{display:block}
 .slot:focus-visible{outline-offset:6px;border-radius:999px}
 .slot i{position:absolute;left:50%;top:50%;width:calc(var(--r) * 2);height:calc(var(--r) * 2);margin:calc(var(--r) * -1) 0 0 calc(var(--r) * -1);border-radius:50%;pointer-events:none}
 .amp{font-family:inherit;font-style:normal;color:var(--pink)}
-.card,.sub{background:#141413f2;border:1px solid var(--line);border-radius:6px}
+/* a company card's lists are <dl class="sub">; :where(dl) keeps these rules off the paper sheets' sub-headings (.sh.sub) */
+.card,:where(dl).sub{background:#141413f2;border:1px solid var(--line);border-radius:6px}
 .card{border-top:2px solid var(--c)}
 .card h3{font:400 1.5em/1.05 var(--disp);text-transform:uppercase;letter-spacing:.014em;display:flex;align-items:center;gap:.45em;flex-wrap:wrap}
 .mini{width:1.5em;height:1.5em;flex:none;border-radius:50%}
@@ -296,9 +297,9 @@ html.no-gl .mark-flat{display:block}
 .c-line{color:var(--fg2);text-wrap:pretty}
 .c-chips{display:flex;gap:.5em;flex-wrap:wrap}
 .c-chips span{font:500 .9em/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:.55em .9em;border:1px solid color-mix(in srgb,var(--c) 70%,transparent);border-radius:999px}
-.sub dt{font-family:var(--mono);font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--c)}
-.sub dd{color:var(--fg)}
-.sub dd + dt{margin-top:.7em}
+:where(dl).sub dt{font-family:var(--mono);font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--c)}
+:where(dl).sub dd{color:var(--fg)}
+:where(dl).sub dd + dt{margin-top:.7em}
 .c-go{display:none}
 .fam{transition:opacity .4s var(--ease),filter .4s var(--ease)}
 .co.dim .fam{filter:saturate(.15) brightness(.64)}
@@ -338,13 +339,13 @@ html.no-gl .mark-flat{display:block}
   /* what is written beside it */
   html.gl .fam{position:absolute;display:grid;gap:.6em;width:var(--w);align-content:start}
   html.gl .card{padding:.85em 1.05em .95em}
-  html.gl .sub{padding:.7em 1.05em .8em;margin:0}
+  html.gl :where(dl).sub{padding:.7em 1.05em .8em;margin:0}
   html.gl .c-ta{font-size:.92em;line-height:1.3;margin-top:.35em}
   html.gl .c-type{font-size:.9em;line-height:1.35;margin-top:.55em;letter-spacing:.1em}
   html.gl .c-line{font-size:1.05em;line-height:1.36;margin-top:.5em}
-  html.gl .sub dt{font-size:.9em;line-height:1.3;letter-spacing:.1em}
-  html.gl .sub dd{font-size:1.02em;line-height:1.36;margin-top:.3em}
-  html.gl .sub.two{display:grid;grid-template-columns:.92fr 1.08fr;gap:0 1.4em}
+  html.gl :where(dl).sub dt{font-size:.9em;line-height:1.3;letter-spacing:.1em}
+  html.gl :where(dl).sub dd{font-size:1.02em;line-height:1.36;margin-top:.3em}
+  html.gl :where(dl).sub.two{display:grid;grid-template-columns:.92fr 1.08fr;gap:0 1.4em}
   html.gl .co[data-co="enterprise"] .fam{--w:25em;left:calc(var(--x) - 12.5em);bottom:calc(65.6em - var(--y) + var(--r) + .8em);text-align:center}
   html.gl .fam-ent .card{background:none;border:0;padding:0}
   html.gl .fam-ent h3{display:block;font-size:1.62em;letter-spacing:.06em}
@@ -391,14 +392,14 @@ html.no-gl .mark-flat{display:block}
   html.gl .ready .co.show .fam{opacity:1;visibility:visible;transform:none;transition:opacity .35s var(--ease),transform .4s var(--ease)}
   html.gl .co.dim .fam{filter:none}
   html.gl .fam .card{grid-column:1 / -1;padding:9px 12px 10px}
-  html.gl .fam .sub{margin:0;padding:7px 11px 8px}
-  html.gl .fam .sub:only-of-type{grid-column:1 / -1}
+  html.gl .fam :where(dl).sub{margin:0;padding:7px 11px 8px}
+  html.gl .fam :where(dl).sub:only-of-type{grid-column:1 / -1}
   html.gl .card h3{font-size:1.75em}
   html.gl .c-ta{font-size:1.05em;margin-top:.3em}
   html.gl .c-type{font-size:.9em;line-height:1.35;margin-top:.55em}
   html.gl .c-line{font-size:1.2em;line-height:1.36;margin-top:.4em}
-  html.gl .sub dt{font-size:.86em;line-height:1.3}
-  html.gl .sub dd{font-size:1.08em;line-height:1.34;margin-top:.25em}
+  html.gl :where(dl).sub dt{font-size:.86em;line-height:1.3}
+  html.gl :where(dl).sub dd{font-size:1.08em;line-height:1.34;margin-top:.25em}
   html.gl .fam-ent .c-chips{margin-top:.9em}
   html.gl .card.two{padding:0;display:grid;grid-template-columns:1fr 1fr}
   html.gl .card.two .row{padding:11px 12px 12px}
@@ -415,7 +416,7 @@ html.no-gl .mark-flat{display:block}
   html.gl .sys-steps{display:none}
   html.gl .sys-years .yr{font-size:8px;padding:3px 6px}
 }
-@media (max-width:1099.98px) and (max-height:740px),(max-height:559.98px){html.gl .sys-head .lede,html.gl .fam .sub{display:none}html.gl .sys-board{--mb:212px}}
+@media (max-width:1099.98px) and (max-height:740px),(max-height:559.98px){html.gl .sys-head .lede,html.gl .fam :where(dl).sub{display:none}html.gl .sys-board{--mb:212px}}
 
 /* laid out flat where there is no world behind it */
 html.no-gl .sys{position:relative;inset:auto;padding:calc(var(--nav) + 40px) var(--gut) 60px}
@@ -434,12 +435,12 @@ html.no-gl .slot,html.no-gl .sys-years,html.no-gl .sys-steps{display:none}
 html.no-gl .fam{display:grid;gap:8px;font-size:10px}
 html.no-gl .card{padding:16px 18px 18px}
 html.no-gl .card h3{font-size:1.9em}
-html.no-gl .sub{margin:0;padding:12px 18px 14px}
+html.no-gl :where(dl).sub{margin:0;padding:12px 18px 14px}
 html.no-gl .c-ta{font-size:1.2em;margin-top:.4em}
 html.no-gl .c-type{font-size:1em;margin-top:.7em}
 html.no-gl .c-line{font-size:1.4em;line-height:1.45;margin-top:.5em}
-html.no-gl .sub dt{font-size:.95em}
-html.no-gl .sub dd{font-size:1.3em;line-height:1.45;margin-top:.3em}
+html.no-gl :where(dl).sub dt{font-size:.95em}
+html.no-gl :where(dl).sub dd{font-size:1.3em;line-height:1.45;margin-top:.3em}
 html.no-gl .c-chips{margin-top:1em}
 html.no-gl .card.two .row + .row{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 html.no-gl .card.two .c-when{font-size:1.9em;line-height:1;margin-top:.5em}
