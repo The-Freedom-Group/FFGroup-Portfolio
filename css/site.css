@@ -438,6 +438,8 @@ html.no-gl.still .veil{display:none}
    once the night has fallen (main.js moves the four colours); the cards are dark plates, since they only come out at night. */
 html.gl #map{height:660vh}
 html.gl #map::before{content:"";position:absolute;left:0;right:0;top:-130px;height:131px;background:var(--porcelain);z-index:-1;pointer-events:none}   /* the white carries on behind the curved foot of the sheet above, so the globe rises out of one sheet */
+html.gl #map::after{content:"";position:absolute;left:0;right:0;top:0;height:100vh;height:100lvh;background:var(--porcelain);z-index:-1;pointer-events:none}   /* and under the first screen of this scene until the globe's own white is drawn (the world follows a fast scroll a moment behind) */
+html.gl #map.live::after{display:none}
 .xm{position:absolute;inset:0;padding:calc(var(--nav) + clamp(8px,2.2vh,24px)) var(--gut) 0;color:var(--fg);pointer-events:none}
 .xm > .sh{pointer-events:auto;display:grid;justify-items:center;text-align:center}
 .xm .sh h2{font-size:clamp(1.9rem,min(3.5vw,5.4vh),3.5rem);margin-top:.32em;white-space:nowrap}

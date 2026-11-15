@@ -187,11 +187,14 @@ function placeTags() {
    the bar across the top with it, and each territory's pin, card and the line between them while the globe shows it */
 const MP_INK = [['--fg', [16, 16, 16], [244, 241, 235]], ['--fg2', [74, 74, 70], [180, 177, 170]], ['--fg3', [110, 108, 102], [138, 135, 129]], ['--hot-t', [198, 15, 110], [255, 45, 141]]]; let mpInk = -1;
 function placeMap() {
-  const M = byId.map, o = world.map, live = M.on && world.mode === 'globe' && o && o.live;
-  setOT(mp, live ? 1 - span(M.pe, MAP_B + 0.005, MAP_B + 0.06) : 0); if (!live) return;
+  /* live: the globe is being drawn. Until it is (the world follows a fast scroll a moment behind) the top of the scene is
+     plain white with its words in ink, which is exactly what the globe's first frame shows, so nothing jumps when it takes over */
+  const M = byId.map, o = world.map, live = world.mode === 'globe' && o && o.live, n = live ? o.night : 0, lit = n < 0.5 ? 0 : 1;
+  M.sec.classList.toggle('live', !!live);
+  setOT(mp, live ? 1 - span(M.pe, MAP_B + 0.005, MAP_B + 0.06) : M.pe < 0.5 ? 1 : 0);
   /* the words go out with the light and come back with the night, changing ink while they are away (halfway down, the sheet is the grey of either ink) */
-  const n = o.night, lit = n < 0.5 ? 0 : 1; if (lit !== mpInk) { mpInk = lit; MP_INK.forEach(([k, a, b]) => mp.style.setProperty(k, 'rgb(' + (lit ? b : a).join() + ')')); }
-  mpHead.style.opacity = Math.max(1 - span(n, 0.04, 0.42), span(n, 0.6, 0.98)).toFixed(3);
+  if (lit !== mpInk) { mpInk = lit; MP_INK.forEach(([k, a, b]) => mp.style.setProperty(k, 'rgb(' + (lit ? b : a).join() + ')')); }
+  mpHead.style.opacity = Math.max(1 - span(n, 0.04, 0.42), span(n, 0.6, 0.98)).toFixed(3); if (!live) return;
   if (syS + 32 >= M.top && syS + 32 < M.top + M.h) { const want = lit ? 'dark' : 'light'; if (body.dataset.nav !== want) body.dataset.nav = want; }
   /* beside the globe, a column of cards moves up to stay level with the pins of the cards it is still showing (as far as
      the words above allow), so when its upper cards have gone the ones left sit by their own pins; the order never changes */
