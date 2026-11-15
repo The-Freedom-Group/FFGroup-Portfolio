@@ -44,6 +44,8 @@ No build step and no dependencies to install: plain HTML, CSS and JavaScript mod
 - `js/world.js` · the renderer and the film finish; `js/w-orbit.js` (mark, system, map, night sky), `js/w-clouds.js`
   (the cloud on the way down and the way up), `js/w-pad.js` (the evening sky behind the last three parts, the launch
   pad, the rocket's arrival and the burn).
+- `js/w-globe.js` · the expansion map's own globe: the logo's pink with white land, cut from the water map alone (never
+  the Earth's photograph, clouds or city lights). It stands on the page's white by day and over the night sky after.
 - `js/planets.js`, `js/space.js`, `js/post.js`, `js/quality.js`, `js/util.js`, `js/cursor.js`, `js/type.js`,
   `js/worlds.js` · shared with the group system site.
 - `js/sound.js` · the galaxy sound, made in the browser with no audio files. It starts quietly on the visitor's first

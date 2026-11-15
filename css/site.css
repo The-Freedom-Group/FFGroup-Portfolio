@@ -715,51 +715,74 @@ p.plain{margin-top:clamp(20px,2.4vw,32px);font:italic 400 clamp(1.1rem,1.5vw,1.3
   .runway-years .s{display:block}
 }
 
-/* 05 the expansion map */
-.mp{position:absolute;inset:0;padding:calc(var(--nav) + 3vh) var(--gut) clamp(18px,3.4vh,34px);display:grid;grid-template-columns:minmax(0,25rem) 1fr minmax(0,20.5rem);grid-template-rows:auto 1fr;gap:0 30px;pointer-events:none}
-.mp > *{pointer-events:auto}
-.mp .sh{grid-column:1;grid-row:1}
-.mp .sh h2{font-size:clamp(1.9rem,3.2vw,3.1rem)}
-.mp .sh h2 em{font-size:.62em}
-.mp .sh .lede{font-size:.98rem;margin-top:1em}
-.mp-legend{grid-column:1;grid-row:2;align-self:end;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
-.mp-legend li{padding:12px 12px 10px 0;border-bottom:1px solid var(--line)}
-.mp-legend li:nth-child(even){padding-left:14px;border-left:1px solid var(--line)}
-.mp-legend b{display:block;font:500 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--pink)}
-.mp-legend span{display:block;font-size:.8rem;line-height:1.35;color:var(--fg2);margin-top:6px}
-.mp-list{grid-column:3;grid-row:1 / 3;align-self:center;border-top:1px solid var(--line)}
-.mp-list li{border-bottom:1px solid var(--line)}
-.mp-list button{width:100%;text-align:left;display:grid;grid-template-columns:62px 1fr;gap:0 10px;padding:10px 0;align-items:baseline;transition:padding .3s var(--ease)}
-.mp-list i{font:500 9px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;font-style:normal;color:var(--fg3)}
-.mp-list b{font:400 1.12rem/1.1 var(--disp);text-transform:uppercase;letter-spacing:.02em;color:var(--fg2);transition:color .2s}
-.mp-list span,.mp-list em{grid-column:2;font-style:normal;max-height:0;overflow:hidden;opacity:0;transition:max-height .4s var(--ease),opacity .3s,margin .3s}
-.mp-list span{font:500 9.5px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--pink)}
-.mp-list em{font-size:.82rem;line-height:1.4;color:var(--fg2)}
-.mp-list li.on button{padding:14px 0}
-.mp-list li.on b,.mp-list button:hover b{color:var(--fg)}
-.mp-list li.on i{color:var(--pink)}
-.mp-list li.on span,.mp-list li.on em{max-height:4em;opacity:1;margin-top:5px}
-.mp-list li.primary i{color:#5fe0a0}
-.mp-list li.primary.on span{color:#5fe0a0}
-.mp-tags{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.mp-tags .tg{position:absolute;left:0;top:0;font:500 9px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;color:#F4F1EB;padding:5px 8px;background:#101010d9;border:1px solid rgba(244,241,235,.24);border-radius:999px;will-change:transform,opacity;transition:border-color .2s}
-.mp-tags .tg.on{border-color:var(--pink);background:#101010}
-.mp-tags .tg.primary.on{border-color:#5fe0a0}
-html.no-gl .mp{position:relative;display:block;padding:calc(var(--nav) + 40px) var(--gut) 60px}
-html.no-gl .mp-legend{margin-top:30px}
-html.no-gl .mp-list{margin-top:30px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:0 30px;border-top:0}
-html.no-gl .mp-list li{border-top:1px solid var(--line);border-bottom:0}
-html.no-gl .mp-list span,html.no-gl .mp-list em{max-height:none;opacity:1;margin-top:5px}
-html.no-gl .mp-tags{display:none}
+/* 05 the expansion map: the group's own globe on the white sheet, then its night. The words are ink by day and light
+   once the night has fallen (main.js moves the four colours); the cards are dark plates, since they only come out at night. */
+html.gl #map{height:660vh}
+html.gl #map::before{content:"";position:absolute;left:0;right:0;top:-130px;height:131px;background:var(--porcelain);z-index:-1;pointer-events:none}   /* the white carries on behind the curved foot of the sheet above, so the globe rises out of one sheet */
+html.gl #map::after{content:"";position:absolute;left:0;right:0;top:0;height:100vh;height:100lvh;background:var(--porcelain);z-index:-1;pointer-events:none}   /* and under the first screen of this scene until the globe's own white is drawn (the world follows a fast scroll a moment behind) */
+html.gl #map.live::after{display:none}
+.xm{position:absolute;inset:0;padding:calc(var(--nav) + clamp(8px,2.2vh,24px)) var(--gut) 0;color:var(--fg);pointer-events:none}
+.xm > .sh{pointer-events:auto;display:grid;justify-items:center;text-align:center}
+.xm .sh h2{font-size:clamp(1.9rem,min(3.5vw,5.4vh),3.5rem);margin-top:.32em;white-space:nowrap}
+.xm .sh h2 em{font-size:.6em;margin-top:.16em}
+.xm .sh .lede{font-size:clamp(.86rem,1.04vw,.98rem);line-height:1.45;max-width:100%;margin-top:.85em;text-wrap:balance}
+.xm-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.xm-lines line{stroke:#F4F1EB;stroke-opacity:.5;stroke-width:1;opacity:0}
+.xm-lines line.on{stroke-opacity:.95}
+.xm-lines line.primary{stroke:var(--o-mint);stroke-opacity:.7}
+.xm-lines line.primary.on{stroke-opacity:1}
+.xm-list{position:absolute;inset:0;pointer-events:none}
+.xm-list li{--c:var(--pink);position:absolute;left:0;top:0;width:300px;opacity:0;will-change:transform,opacity}
+.xm-list li.primary{--c:var(--o-mint)}
+.xm-list button{pointer-events:auto;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 12px;width:100%;text-align:left;padding:11px 14px 12px;background:#161615;border:1px solid rgba(244,241,235,.2);border-radius:6px;color:#F4F1EB;transition:border-color .25s,background .25s}
+.xm-list b{display:flex;align-items:center;gap:9px;font:400 1.06rem/1.15 var(--disp);letter-spacing:.022em;text-transform:uppercase;white-space:nowrap}
+.xm-list b::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c);flex:none}
+.xm-list i{font:500 9px/1 var(--mono);letter-spacing:.16em;font-style:normal;color:var(--c);border:1px solid color-mix(in srgb,var(--c) 55%,transparent);border-radius:999px;padding:4px 8px}
+.xm-list span{grid-column:1 / -1;font:500 9.5px/1.4 var(--mono);letter-spacing:.15em;text-transform:uppercase;color:var(--c);margin-top:7px}
+.xm-list em{grid-column:1 / -1;font-style:normal;font-size:.8rem;line-height:1.4;color:#B4B1AA;margin-top:2px}
+.xm-list button:hover{border-color:rgba(244,241,235,.5)}
+.xm-list li.on button{border-color:var(--c);background:#101010}
+.xm-pins{position:absolute;inset:0;pointer-events:none}
+.xm-pin{--c:var(--pink);position:absolute;left:0;top:0;width:24px;height:30px;display:grid;justify-items:center;align-items:end;opacity:0;pointer-events:auto;will-change:transform,opacity}
+.xm-pin.primary{--c:var(--o-mint)}
+.xm-pin.on{z-index:2}
+.xm-pin svg{width:18px;height:24px;overflow:visible;transform-origin:50% 97%;transition:transform .3s var(--ease)}
+.xm-pin.on svg{transform:scale(1.24)}
+.xm-pin path{fill:var(--c);stroke:#fff;stroke-width:1.1;stroke-linejoin:round}
+.xm-pin circle{fill:#fff}
+.xm-step{display:none}
+html.no-gl .xm{position:relative;padding:calc(var(--nav) + 40px) var(--gut) 60px}
+html.no-gl .xm > .sh{justify-items:start;text-align:left}
+html.no-gl .xm .sh h2{white-space:normal}
+html.no-gl .xm-list{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:34px}   /* three rows of three, nearest first */
+html.no-gl .xm-list li{position:static;width:auto;opacity:1}
+@media (max-width:1019px){html.no-gl .xm-list{grid-template-columns:repeat(2,minmax(0,1fr))}html.no-gl .xm-list li:last-child{grid-column:1 / -1}}
+@media (max-width:639px){html.no-gl .xm-list{grid-template-columns:1fr}}
+html.no-gl .xm-list button{height:100%;align-content:start;cursor:default;border-color:rgba(244,241,235,.2)}
+html.no-gl .xm-lines,html.no-gl .xm-pins{display:none}
 
-@media (min-width:900px) and (max-width:1239px){
-  .mp{grid-template-columns:minmax(0,23rem) 1fr;grid-template-rows:auto 1fr auto}
-  .mp .sh .lede{display:none}
-  .mp-list{grid-column:1;grid-row:2;align-self:center}
-  .mp-list button{padding:7px 0}
-  .mp-list li.on button{padding:9px 0}
-  .mp-legend{grid-row:3}
-  .mp-legend span{font-size:.74rem}
+/* too narrow or too short for cards beside the globe: the globe above, one card at a time below it, stepped through */
+@media (max-width:1199px),(max-height:599px){
+  html.gl .xm-list{inset:auto var(--gut) 64px;display:grid;justify-items:center}
+  html.gl .xm-list li{position:relative;grid-area:1 / 1;width:min(100%,420px)}
+  html.gl .xm-step{position:absolute;left:var(--gut);right:var(--gut);bottom:10px;height:44px;display:flex;align-items:center;justify-content:center;gap:18px;color:#F4F1EB;opacity:0}
+  .xm-step button{pointer-events:auto;width:44px;height:44px;border-radius:50%;border:1px solid rgba(244,241,235,.3);display:grid;place-items:center}
+  .xm-step svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .xm-step p{font:500 11px/1 var(--mono);letter-spacing:.2em;color:#B4B1AA;min-width:5.5em;text-align:center}
+  .xm-step p b{font-weight:500;color:#F4F1EB}
+}
+@media (max-width:899px){
+  .xm{padding-top:calc(var(--nav) + 6px)}
+  .xm .sh h2{font-size:clamp(1.25rem,6vw,2.1rem);white-space:normal}
+  .xm .sh .lede{font-size:.84rem;line-height:1.4;margin-top:.7em}
+}
+@media (max-width:899px) and (max-height:700px){
+  .xm .sh .lede{display:none}
+}
+@media (min-width:1200px) and (max-height:700px){
+  html.gl .xm .sh .lede{display:none}
+  .xm-list button{padding:8px 14px 9px}
+  .xm-list span{margin-top:4px}
 }
 
 /* 06 the growth plan, 07 the horizon */
