@@ -79,7 +79,8 @@ function setPin(i, scrollList) { if (i === mpPin) return; mpPin = i; mpItems.for
 mpItems.forEach((li, i) => $('button', li).addEventListener('click', () => { const s = byId.map; measure(); if (!GL) return; const p = MAP_A + (i + 0.5) / mpItems.length * (MAP_B - MAP_A); scrollTo({ top: s.top + p * (s.h - vh), behavior: STILL ? 'auto' : 'smooth' }); }));
 
 const heroCopy = $('.hero-copy'), kpis = $('#kpis'), mark = $('#mark'), cue = $('.cue'), markO = $('#markO');
-const focusBox = $('#focusBox'), mp = $('#mp'), rsHead = $('#rs .sh'), rsCards = $$('#rsCards li'), rsMech = $('#rsMech'), loClose = $('.lo-close'), loCtl = $('#loCtl');
+const focusBox = $('#focusBox'), mp = $('#mp'), rs = $('#rs'), rsHead = $('#rs .sh'), rsList = $('#rsCards'), rsCards = $$('#rsCards li'), rsMech = $('#rsMech'), loBox = $('#lo'), loHead = $('#loHead'), loClose = $('#loClose'), loCtl = $('#loCtl');
+let rsAt = -1;
 const setOT = (n, o, y = 0, x = 0) => { n.style.opacity = o.toFixed(3); n.style.transform = (x || y) ? `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)` : 'none'; n.style.pointerEvents = o < 0.4 ? 'none' : ''; n.style.visibility = o < 0.004 ? 'hidden' : 'visible'; };
 
 function drive() {
@@ -95,12 +96,18 @@ function drive() {
   /* 05: the map */
   setOT(mp, byId.map.on ? span(byId.map.pe, -0.03, 0.04) * (1 - span(M, 0.955, 1.0)) : 0, 0);
   if (performance.now() - mpHold > 900) setPin(M < 0.04 || !byId.map.on ? -1 : clamp(Math.floor((M - MAP_A) / (MAP_B - MAP_A) * mpItems.length), 0, mpItems.length - 1), true);
-  /* 09: the raise */
-  const rOn = byId.raise.on ? 1 - span(R, 0.93, 0.995) : 0, rIn = span(byId.raise.pe, -0.03, 0.05); setOT(rsHead, rIn * rOn, 24 * (1 - rIn));
-  rsCards.forEach((c, i) => { const a = span(R, 0.1 + i * 0.115, 0.17 + i * 0.115); setOT(c, a * rOn, 0, 60 * (1 - a)); });
-  { const a = span(R, 0.7, 0.78); setOT(rsMech, a * rOn, 30 * (1 - a)); }
-  /* 11: the closing words, then mission control */
-  { const a = span(L, 0.02, 0.12) * (1 - span(L, 0.4, 0.52)); setOT(loClose, byId.liftoff.on ? a : 0, -30 * span(L, 0.4, 0.52)); const b = span(L, 0.54, 0.68); setOT(loCtl, byId.liftoff.on ? b : 0, 30 * (1 - b)); }
+  /* 09: the raise: once the climb is through the first cloud the heading comes up, then the five cards one by one, then
+     the mechanism; it holds complete, and leaves as the sky settles to night */
+  const rOn = byId.raise.on ? 1 - span(R, 0.84, 0.91) : 0; { const a = span(R, 0.05, 0.115); setOT(rsHead, a * rOn, 18 * (1 - a)); }
+  rsCards.forEach((c, i) => { const a = span(R, 0.15 + i * 0.095, 0.22 + i * 0.095); setOT(c, a * rOn, 26 * (1 - a)); });
+  setOT(rsMech, span(R, 0.63, 0.7) * rOn, 0);
+  { const at = clamp(Math.floor((R - 0.15) / 0.095), 0, rsCards.length - 1); if (at !== rsAt) { rsAt = at; rsCards.forEach((c, i) => c.classList.toggle('on', i === at)); } rs.classList.toggle('deep', R > 0.13); if (byId.raise.on && vw < 900) { padRooms.sky = rsList.offsetTop; padRooms.skyTop = rsHead.offsetTop + rsHead.offsetHeight; } }   /* on a phone: the card being read is open, the lede has made room, and the moon sits just above the cards (never behind the words) */
+  /* 11: mission control and the closing words ride in with the scene; the console comes up once the rocket is standing.
+     On a phone the closing words then give the rocket their room */
+  { const lo = byId.liftoff, a = lo.on ? span(lo.x, -0.6, -0.22) : 0, b = lo.on ? span(lo.x, -0.42, -0.02) * (vw < 900 ? 1 - span(L, 0.6, 0.7) : 1) : 0, c = lo.on ? span(L, 0.64, 0.76) : 0;
+    /* past the end of the scene (the footer coming up under it) the words hold their place on the screen for as long as the console leaves them room */
+    let hold = 0; if (lo.pe > 1) { const low = vw < 900 ? loHead : loClose; hold = Math.min((lo.x - lo.len) * vh, Math.max(0, loCtl.offsetTop - low.offsetTop - low.offsetHeight - 24)); }
+    setOT(loHead, a, 22 * (1 - a) + hold); setOT(loClose, b, 22 * (1 - span(lo.x, -0.42, -0.02)) + hold); setOT(loCtl, c, 26 * (1 - c)); loBox.classList.toggle('land', L > 0.06); }
 }
 
 /* ───────── sound (made in the browser, off until asked for) ───────── */
@@ -158,9 +165,9 @@ function mapRoom() {
   else if (l.left > h.right + 80) { g.x0 = h.right + 10; g.x1 = l.left - 34; g.y0 = ht; g.y1 = ht + vh - 130; }
   else { g.x0 = Math.max(h.right, l.right) + 44; g.x1 = vw - 60; g.y0 = ht - 10; g.y1 = ht + vh - 120; }
 }
-/* and where the rocket may stand on a phone: under the closing words, then above mission control */
-const padRooms = { a0: 0, a1: 1, b0: 0, b1: 1 };
-function padRoom() { padRooms.a0 = loClose.offsetTop + loClose.offsetHeight + 14; padRooms.a1 = vh - 20; padRooms.b0 = 70; padRooms.b1 = loCtl.offsetTop - 12; }
+/* and where the rocket may stand on a phone: under the closing words while it lands, then between the heading and the console */
+const padRooms = { a0: 0, a1: 1, b0: 0, b1: 1, sky: 0, skyTop: 0 };
+function padRoom() { padRooms.a0 = loClose.offsetTop + loClose.offsetHeight + 14; padRooms.a1 = vh - 20; padRooms.b0 = loHead.offsetTop + loHead.offsetHeight + 12; padRooms.b1 = loCtl.offsetTop - 12; }
 /* the world says where its worlds and pins are on screen; the names follow */
 function placeTags() {
   const out = world.out; if (!out) return;
@@ -169,17 +176,17 @@ function placeTags() {
 }
 
 /* ───────── liftoff ───────── */
-const loBtn = $('#liftoffBtn'), loCount = $('#loCount b'); let launching = false;
+const loBtn = $('#liftoffBtn'), loCount = $('#loCount b'), loT = loCount.previousSibling || document.createTextNode(''); let launching = false;   // loT: the "T-" in front of the clock
 loBtn.addEventListener('click', async () => {
   if (launching) return; launching = true;
   if (!GL || !world) { scrollTo({ top: 0, behavior: STILL ? 'auto' : 'smooth' }); launching = false; return; }
   body.classList.add('launching'); if (sound) sound.countdown();
   for (let s = 3; s >= 1; s--) { loCount.textContent = '00:0' + s; await new Promise(r => setTimeout(r, 1000)); }
-  loCount.textContent = '00:00'; if (sound) sound.launch();
+  loT.nodeValue = ''; loCount.textContent = 'LIFTOFF'; if (sound) sound.launch();
   await world.launch();                                        // the burn: resolves when the rocket is through the cloud
   flash.style.background = '#F4F1EB'; flash.style.transition = 'opacity .5s'; flash.style.opacity = 1;
   await new Promise(r => setTimeout(r, 520));
-  scrollTo({ top: 0, behavior: 'instant' }); syS = 0; world.arrive(); body.classList.remove('launching'); loCount.textContent = '00:03';
+  scrollTo({ top: 0, behavior: 'instant' }); syS = 0; world.arrive(); body.classList.remove('launching'); loT.nodeValue = 'T-'; loCount.textContent = '00:03';
   await new Promise(r => setTimeout(r, 160)); flash.style.transition = 'opacity 1.4s'; flash.style.opacity = 0; launching = false;
 });
 
