@@ -462,31 +462,34 @@
 </section>
 
 <!-- ═════════ 08 · the team ═════════ -->
-<section id="crew" class="paper edge-in edge-out" data-theme="light" data-no="08" data-name="The team">
-  <div class="wrap">
+<!-- the staff chart sits on a carbon sheet: its division colours were made for a dark ground. On a phone the heading,
+     the order and the chart are the earlier portfolio's phone layout (the .for-ph parts show there, the .for-dk parts here). -->
+<section id="crew" class="edge-in edge-out" data-theme="night" data-no="08" data-name="The team" aria-label="Culture, team structure and future talent pipeline">
+  <div class="wrap crew-wrap">
     <div class="crew-top">
       <header class="sh">
-        <p class="kick"><b>08</b> Culture, team structure &amp; talent pipeline</p>
-        <h2>The people behind <em>the movement</em></h2>
-        <p class="lede">Filter by division or employment type, pick anyone for detail, and open the pipeline to see where we’re hiring next.</p>
+        <p class="kick"><b>08</b> <span class="for-dk">Culture, team structure &amp; talent pipeline</span><span class="for-ph">The Staff Matrix</span></p>
+        <h2><span class="for-dk">The people behind <em>the movement</em></span><span class="for-ph">Explore the People <em>Powering The Group</em></span></h2>
+        <p class="lede for-dk">A colour coded organisational matrix. Filter by division or employment type, click anyone for detail, and open the pipeline to see where we’re hiring next.</p>
       </header>
+      <ul class="heads" id="heads"></ul>
       <figure class="crew-photo">
-        <img loading="lazy" decoding="async" width="900" height="1200" src="journey-photos/team-in-van.webp" alt="The Freedom team on a Martello container lorry at Unit 19">
+        <div class="cp"><img loading="lazy" decoding="async" width="900" height="1200" src="journey-photos/team-in-van.webp" alt="The Freedom team on a Martello container lorry at Unit 19"></div>
         <figcaption>The team at Unit 19, Freedom Fire &amp; Safety headquarters.</figcaption>
       </figure>
     </div>
-    <ul class="heads" id="heads"></ul>
     <div class="crew-bar">
-      <div class="seg" id="crewView" role="group" aria-label="Group the team by">
-        <button type="button" data-view="orbit" aria-pressed="false">Org chart</button>
-        <button type="button" data-view="division" aria-pressed="true">By division</button>
-        <button type="button" data-view="type" aria-pressed="false">By employment type</button>
+      <div class="seg" id="crewView" role="group" aria-label="Chart layout">
+        <button type="button" data-view="spider" aria-pressed="true">Spider diagram</button>
+        <button type="button" data-view="division" aria-pressed="false">Matrix</button>
+        <button type="button" data-view="employment" aria-pressed="false">By employment type</button>
       </div>
-      <button class="btn line" id="pipeBtn" type="button" aria-haspopup="dialog" aria-controls="pipeline">View future job positions <b id="pipeCount"></b></button>
+      <button class="pipe-cta" id="pipeBtn" type="button" aria-haspopup="dialog" aria-controls="pipeline">View Future Job Positions <b id="pipeCount"></b><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4"/></svg></button>
     </div>
-    <div class="chips" id="crewChips" role="group" aria-label="Filter the team by division"></div>
-    <div class="crew" id="crewBody"></div>
+    <div class="chips" id="crewChips" role="group" aria-label="Filter team by division"></div>
+    <div class="tm" id="crewPhone"></div>
   </div>
+  <div class="crew-wide"><div class="crew" id="crewBody"></div></div>
 </section>
 
 <!-- ═════════ 09 · the raise ═════════ -->
@@ -606,7 +609,7 @@
     <p class="kick">Join the movement</p>
     <h3 id="pipeTitle">Future job positions</h3>
     <p>Today it’s fire and safety products; tomorrow it’s any market we decide to conquer. These are the seats we’re opening as we scale.</p>
-    <form method="dialog"><button class="x" aria-label="Close future job positions" autofocus><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2 2 12"/></svg></button></form>
+    <button class="x" id="pipeClose" type="button" aria-label="Close future job positions" autofocus><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2 2 12"/></svg></button>
   </div>
   <div class="pl-body" id="pipeBody"></div>
   <p class="pl-foot">Think you belong here? Write to <b>info@freedom-fire.co.uk</b>. We hire on belief, hustle and grit.</p>
