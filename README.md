@@ -8,7 +8,7 @@ One page that tells the investment story from top to bottom:
 | | Part | What is on it |
 |---|---|---|
 | 00 | Start | The group's mark, alive: the pink globe on its orbit. The headline and three proof figures. |
-| 01 | The system | The companies as a solar system, six stops, then a dive at Freedom Global through cloud to the investment focus. |
+| 01 | The system | The opening is pulled away to a point, a nova, and the group builds itself as a hierarchy of worlds: Enterprise at the top, each company arriving on its ring with its lane and its cards, until the whole map is on screen. Then a dive at Freedom Global through cloud to the investment focus. |
 | 02 | The journey | Twenty-one chapters, March 2019 to August 2026, each with its own photographs and the full text behind "Read the chapter". |
 | 03 | Traction | Revenue by year with the channel split, the growth multiples, four evidence pillars. |
 | 04 | The market | Three nested markets, one year at a time. |
@@ -41,8 +41,14 @@ No build step and no dependencies to install: plain HTML, CSS and JavaScript mod
 - `js/main.js` · content first, then the world, then one loop that reads the scroll and tells each pinned scene, the
   world and the chrome where the story is.
 - `js/journey.js`, `js/charts.js`, `js/crew.js` · the chapters, the figures (SVG drawn at the size shown), the team.
-- `js/world.js` · the renderer and the film finish; `js/w-orbit.js` (mark, system, map, night sky), `js/w-clouds.js`
-  (the cloud on the way down and the way up), `js/w-pad.js` (the launch pad and the burn).
+- `js/sysmap.js` · the opening and the system as the page drives them: one timeline read from the scroll (the opening
+  pulled away, the nova, then a beat for each ring, heading, lane, world and card), which company is the bright one, and
+  the place the layout gives each world.
+- `js/world.js` · the renderer and the film finish; `js/w-orbit.js` (mark, system, map, night sky), `js/w-system.js`
+  (the system's rings, lanes and nova, and the sums that put each world on its ring where the page has room for it),
+  `js/w-clouds.js` (the cloud on the way down and the way up), `js/w-pad.js` (the launch pad and the burn).
+- `assets/minis/` · the eight worlds as small pictures (96 px, and `@2x` at 192 px), rendered from the worlds
+  themselves; used wherever a company is marked.
 - `js/planets.js`, `js/space.js`, `js/post.js`, `js/quality.js`, `js/util.js`, `js/cursor.js`, `js/type.js`,
   `js/worlds.js` · shared with the group system site.
 - `js/sound.js` · sound made in the browser, off until asked for.

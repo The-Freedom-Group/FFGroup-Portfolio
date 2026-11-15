@@ -5,6 +5,7 @@ import { $, $$, el, svg, clamp, lerp, span, smooth, reveals, counters, lightDism
 import { initJourney } from './journey.js';
 import { initCharts } from './charts.js';
 import { initCrew } from './crew.js';
+import { initSystem } from './sysmap.js';
 
 const html = document.documentElement, body = document.body;
 let GL = html.classList.contains('gl');
@@ -43,7 +44,7 @@ rail.append(railOl, rocket);
 /* a move to another part: glide when it is near, cut through black when it is far */
 const flash = $('#flash');
 function goTo(id) {
-  const s = byId[id]; if (!s) return; measure(); const y = Math.round(s.top); const far = Math.abs(y - scrollY) > vh * 2.5;
+  const s = byId[id]; if (!s) return; measure(); const y = Math.round(s.top + landIn(s)); const far = Math.abs(y - scrollY) > vh * 2.5;
   if (!far || STILL) { scrollTo({ top: y, behavior: STILL ? 'auto' : 'smooth' }); return; }
   flash.style.background = '#101010'; flash.style.transition = 'opacity .22s'; flash.style.opacity = 1;
   setTimeout(() => { scrollTo({ top: y, behavior: 'instant' }); syS = y; setTimeout(() => { flash.style.transition = 'opacity .5s'; flash.style.opacity = 0; }, 90); }, 230);
@@ -54,21 +55,10 @@ document.addEventListener('click', e => {
 });
 
 /* ───────── the scenes' own furniture ───────── */
-/* 01 the system: six stops */
-const SYS = [
-  { co: 'enterprise', label: 'Enterprise', c: '#FF2D8D', worlds: ['enterprise'] }, { co: 'global', label: 'Global', c: '#6fb6ff', worlds: ['global'] },
-  { co: 'facilities', label: 'Facilities', c: '#2fe2a0', worlds: ['facilities'] }, { co: 'distribution', label: 'Distribution', c: '#ff7a3d', worlds: ['distribution'] },
-  { co: 'future29', label: 'Form & Freight', c: '#f2c94c', worlds: ['form', 'freight'] }, { co: 'future30', label: 'Fly & Fuel', c: '#b48cff', worlds: ['fly', 'fuel'] }
-];
-const SYS_A = 0.07, SYS_B = 0.84;                                // the stretch of the system scene the six stops share
-const sysEl = $('#sys'), sysCards = $$('#sysCards .card'), sysSteps = $('#sysSteps'); let sysStep = -1;
-const sysBtns = SYS.map((s, i) => { const b = el('button', { type: 'button', 'aria-pressed': 'false', style: '--c:' + s.c, text: s.label, onclick: () => stepTo(i) }); sysSteps.append(b); return b; });
-function stepTo(i) { const s = byId.system; measure(); const p = SYS_A + (i + 0.5) / SYS.length * (SYS_B - SYS_A); scrollTo({ top: s.top + p * (s.h - vh), behavior: STILL ? 'auto' : 'smooth' }); }
-function setSysStep(i) { if (i === sysStep) return; sysStep = i; sysCards.forEach((c, k) => c.classList.toggle('on', k === i)); sysBtns.forEach((b, k) => b.setAttribute('aria-pressed', String(k === i))); sysEl.classList.toggle('deep', i > 0); labels.forEach(l => l.n.classList.toggle('on', i >= 0 && SYS[i].worlds.includes(l.id))); if (i >= 0 && sound) sound.step(i); }
-/* the names that ride beside the worlds */
-const LABELS = [['enterprise', 'Enterprise', 'Holding', '#FF2D8D', 0], ['global', 'Global', 'Active', '#6fb6ff', 1], ['facilities', 'Facilities', 'Planned', '#2fe2a0', 2], ['distribution', 'Distribution', 'Planned', '#ff7a3d', 3],
-  ['form', 'Form', '2029', '#f2c94c', 4], ['freight', 'Freight', '2029', '#e9b86a', 4], ['fly', 'Fly', '2030+', '#b48cff', 5], ['fuel', 'Fuel', '2030+', '#7d8cff', 5]];
-const labels = LABELS.map(([id, name, tag, c, step]) => { const n = el('button.lb', { type: 'button', tabindex: -1, style: '--c:' + c, onclick: () => stepTo(step) }, name, el('em', { text: tag })); $('#sysLabels').append(n); return { id, n, step }; });
+/* 00 and 01, the opening and the system: their timeline, their places and what is written on them are in sysmap.js */
+const sys = GL ? safe('system', () => initSystem({ byId, onStep: i => { if (sound) sound.step(i); } })) : null;
+/* a jump to the system lands on the finished map, not on its first pixel */
+function landIn(s) { return s.id === 'system' && sys && GL ? sys.land() * Math.max(0, s.h - vh) : 0; }
 
 /* 05 the map: nine territories */
 const mpItems = $$('#mpList li'), mpList = $('#mpList'); let mpPin = -1, mpHold = 0;
@@ -78,20 +68,13 @@ function setPin(i, scrollList) { if (i === mpPin) return; mpPin = i; mpItems.for
   if (scrollList && i >= 0 && vw < 900) { const li = mpItems[i]; mpList.scrollTo({ left: li.offsetLeft - (mpList.clientWidth - li.clientWidth) / 2, behavior: 'smooth' }); } if (i >= 0 && sound) sound.tick(); }
 mpItems.forEach((li, i) => $('button', li).addEventListener('click', () => { const s = byId.map; measure(); if (!GL) return; const p = MAP_A + (i + 0.5) / mpItems.length * (MAP_B - MAP_A); scrollTo({ top: s.top + p * (s.h - vh), behavior: STILL ? 'auto' : 'smooth' }); }));
 
-const heroCopy = $('.hero-copy'), kpis = $('#kpis'), mark = $('#mark'), cue = $('.cue'), markO = $('#markO');
 const focusBox = $('#focusBox'), mp = $('#mp'), rsHead = $('#rs .sh'), rsCards = $$('#rsCards li'), rsMech = $('#rsMech'), loClose = $('.lo-close'), loCtl = $('#loCtl');
 const setOT = (n, o, y = 0, x = 0) => { n.style.opacity = o.toFixed(3); n.style.transform = (x || y) ? `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)` : 'none'; n.style.pointerEvents = o < 0.4 ? 'none' : ''; n.style.visibility = o < 0.004 ? 'hidden' : 'visible'; };
 
 function drive() {
-  const T = byId.top.p, S = byId.system.p, F = byId.focus.p, M = byId.map.p, R = byId.raise.p, L = byId.liftoff.p;
-  /* 00: the words leave, the mark opens */
-  let k = span(T, 0.16, 0.5); setOT(heroCopy, 1 - k, -50 * k); setOT(kpis, 1 - span(T, 0.1, 0.4), 30 * span(T, 0.1, 0.4)); cue.style.opacity = (1 - span(T, 0.02, 0.12)).toFixed(3);
-  k = span(T, 0.16, 0.4); mark.style.opacity = (1 - k).toFixed(3); mark.style.visibility = k > 0.995 ? 'hidden' : 'visible';      /* the letters go before the globe leaves its place among them */
-  /* 01: the system comes up, six stops, then the dive */
-  const sysIn = byId.system.on ? span(byId.system.pe, -0.02, 0.035) * (1 - span(S, 0.875, 0.93)) : 0; setOT(sysEl, sysIn, 0); sysEl.style.visibility = sysIn < 0.004 ? 'hidden' : 'visible';
-  setSysStep(S <= 0 || S > 0.9 ? (S > 0.9 ? -1 : 0) : clamp(Math.floor((S - SYS_A) / (SYS_B - SYS_A) * SYS.length), 0, SYS.length - 1));
+  const F = byId.focus.p, M = byId.map.p, R = byId.raise.p, L = byId.liftoff.p;
   /* the way down: the investment focus rides the clouds */
-  k = span(F, 0.06, 0.2); const out = span(F, 0.6, 0.76); setOT(focusBox, k * (1 - out), 0); focusBox.style.transform = `translate(-50%,calc(-50% + ${(70 * (1 - k) - 120 * out).toFixed(1)}px))`;
+  let k = span(F, 0.06, 0.2); const out = span(F, 0.6, 0.76); setOT(focusBox, k * (1 - out), 0); focusBox.style.transform = `translate(-50%,calc(-50% + ${(70 * (1 - k) - 120 * out).toFixed(1)}px))`;
   /* 05: the map */
   setOT(mp, byId.map.on ? span(byId.map.pe, -0.03, 0.04) * (1 - span(M, 0.955, 1.0)) : 0, 0);
   if (performance.now() - mpHold > 900) setPin(M < 0.04 || !byId.map.on ? -1 : clamp(Math.floor((M - MAP_A) / (MAP_B - MAP_A) * mpItems.length), 0, mpItems.length - 1), true);
@@ -111,7 +94,7 @@ soundBtn.addEventListener('click', async () => {
 });
 
 /* ───────── the loop ───────── */
-let world = null, syS = scrollY, last = performance.now(), curPart = null, navTheme = '', lastMode, markW = 0; const slot = { x: 0, y: 0, r: 0 }, markMain = $('.mk-main'), veilPaper = $('#veilPaper');
+let world = null, syS = scrollY, last = performance.now(), curPart = null, navTheme = '', lastMode; const veilPaper = $('#veilPaper');
 function pickWorld(mid) {
   /* the world behind whatever fills the middle of the screen; behind paper, whichever world is still in view at an edge */
   let at = sections.find(s => mid >= s.top && mid < s.top + s.h) || sections[sections.length - 1];
@@ -134,23 +117,15 @@ function frame(now) {
   if (journey) journey.frame(vh);
   if (world) {
     const w = pickWorld(mid); const mode = w ? w.world : null; if (mode !== lastMode) { lastMode = mode; world.setMode(mode); }
-    if (byId.top.p < 0.14 || !slot.r) { const o = markO.getBoundingClientRect(); slot.x = o.left + o.width / 2; slot.y = o.top + o.height / 2; slot.r = o.width / 2; markW = markMain.getBoundingClientRect().width; }
-    if (byId.system.on || byId.top.on) sysRoom(); if (byId.map.on) mapRoom(); if (byId.liftoff.on) padRoom();
-    world.update({ top: byId.top, system: byId.system, focus: byId.focus, map: byId.map, raise: byId.raise, liftoff: byId.liftoff, sysStep, sysWorlds: sysStep >= 0 ? SYS[sysStep].worlds : [], pin: mpPin, slot, markW, room, globeRoom, pad: padRooms, skyTurn: syS / Math.max(1, vh) * 0.04 }, dt, now / 1000);
+    if (byId.map.on) mapRoom(); if (byId.liftoff.on) padRoom();
+    world.update({ top: byId.top, system: byId.system, focus: byId.focus, map: byId.map, raise: byId.raise, liftoff: byId.liftoff, sys: sys.frame(), pin: mpPin, globeRoom, pad: padRooms, skyTurn: syS / Math.max(1, vh) * 0.04 }, dt, now / 1000);
     veilPaper.style.opacity = world.veil.toFixed(3);
-    placeTags();
+    sys.after(world.out); placeTags();
   }
   requestAnimationFrame(frame);
 }
-/* the part of the screen the system may fill: beside the words on a wide screen, between the words and the card on a phone */
-const room = { x0: 0, y0: 0, x1: 1, y1: 1 }, sysHead = $('.sys .sh'), sysStats = $('.sys-stats'), sysStage = $('#system .stage'), mapStage = $('#map .stage');
-function sysRoom() {   /* measured inside the stage, as if it were already pinned, so the system never rides in from off screen */
-  const o = sysStage.getBoundingClientRect().top;
-  if (vw < 900) { const h = sysHead.getBoundingClientRect(), st = sysStats.getBoundingClientRect(), c = sysCards[Math.max(0, sysStep)].getBoundingClientRect(), top = Math.max(h.bottom, sysEl.classList.contains('deep') ? 0 : st.bottom) - o;
-    room.x0 = 4; room.x1 = vw - 4; room.y0 = top + 44; room.y1 = Math.max(top + 170, c.top - o - 6); }
-  else { const h = sysHead.getBoundingClientRect(); room.x0 = Math.min(vw * 0.44, h.left + 480); room.x1 = vw - 58; room.y0 = h.top - o - 20; room.y1 = h.top - o + vh - 150; }
-}
-/* and the part the globe may fill at the map: between the words and the list, whichever way they are laid out */
+const mapStage = $('#map .stage');
+/* the part of the screen the globe may fill at the map: between the words and the list, whichever way they are laid out */
 const globeRoom = { x0: 0, y0: 0, x1: 1, y1: 1 }, mpHead = $('.mp .sh'), mpLegend = $('.mp-legend');
 function mapRoom() {
   const o = mapStage.getBoundingClientRect().top, h = mpHead.getBoundingClientRect(), l = mpList.getBoundingClientRect(), g = globeRoom, ht = h.top - o, hb = h.bottom - o;
@@ -161,10 +136,9 @@ function mapRoom() {
 /* and where the rocket may stand on a phone: under the closing words, then above mission control */
 const padRooms = { a0: 0, a1: 1, b0: 0, b1: 1 };
 function padRoom() { padRooms.a0 = loClose.offsetTop + loClose.offsetHeight + 14; padRooms.a1 = vh - 20; padRooms.b0 = 70; padRooms.b1 = loCtl.offsetTop - 12; }
-/* the world says where its worlds and pins are on screen; the names follow */
+/* the world says where its pins are on screen; the names follow */
 function placeTags() {
   const out = world.out; if (!out) return;
-  labels.forEach(l => { const o = out.labels[l.id]; if (!o || o.a < 0.02) { l.n.style.opacity = 0; l.n.style.visibility = 'hidden'; return; } l.n.style.visibility = 'visible'; l.n.style.opacity = o.a.toFixed(2); l.n.style.transform = `translate3d(${o.x.toFixed(1)}px,${o.y.toFixed(1)}px,0) translate(-50%,-100%)`; });
   mpTags.forEach((t, i) => { const o = out.pins[i]; if (!o || o.a < 0.02) { t.style.opacity = 0; t.style.visibility = 'hidden'; return; } t.style.visibility = 'visible'; t.style.opacity = o.a.toFixed(2); t.style.transform = `translate3d(${o.x.toFixed(1)}px,${o.y.toFixed(1)}px,0) translate(${o.left ? '-100%' : '0'},-50%)`; });
 }
 
@@ -185,7 +159,7 @@ loBtn.addEventListener('click', async () => {
 
 /* ───────── start ───────── */
 const ldPct = $('#ldPct'), ldText = $('#ldText');
-function loaded() { html.classList.remove('booting'); counters($('#kpis'), true); if (location.hash && byId[location.hash.slice(1)] && location.hash !== '#top') { measure(); scrollTo({ top: byId[location.hash.slice(1)].top, behavior: 'instant' }); syS = scrollY; } }
+function loaded() { html.classList.remove('booting'); counters($('#kpis'), true); if (location.hash && byId[location.hash.slice(1)] && location.hash !== '#top') { measure(); const s = byId[location.hash.slice(1)]; scrollTo({ top: s.top + landIn(s), behavior: 'instant' }); syS = scrollY; } }
 async function start() {
   measure(); addEventListener('resize', measure); if ('ResizeObserver' in window) new ResizeObserver(measure).observe($('#main'));
   /* a phone turned on its side (or back): the page is laid out differently, so start it again where the reader was */

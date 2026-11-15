@@ -28,7 +28,9 @@ function thinRingTex() {
 export function softDisc(size, stops) { return canvasTex(size, size, (ctx, w, h) => { const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); stops.forEach(s => g.addColorStop(s[0], s[1])); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); }); }
 
 /* ───────────── shaders ───────────── */
-const HEAD = `varying vec2 vUv; varying vec3 vN; varying vec3 vW; varying vec3 vObj; uniform vec3 sunPos; uniform float time;` + GLSL_NOISE + GLSL_PERTURB;
+/* every world can be told to lose its colour and dim, or to brighten (the system does this as the story reaches a company) */
+const LOOK = `uniform float sat; uniform float gain; vec3 look(vec3 c){ float l = dot(c, vec3(0.2126, 0.7152, 0.0722)); return mix(vec3(l), c, sat) * gain; }`;
+const HEAD = `varying vec2 vUv; varying vec3 vN; varying vec3 vW; varying vec3 vObj; uniform vec3 sunPos; uniform float time;` + LOOK + GLSL_NOISE + GLSL_PERTURB;
 const RAMP = `uniform float useRamp; uniform vec3 rampA; uniform vec3 rampB;
 vec3 recolour(vec3 alb){ if (useRamp < 0.5) return alb; float l = dot(alb, vec3(0.299, 0.587, 0.114)); l = smoothstep(0.06, 0.9, l); return mix(rampA, rampB, l); }`;
 const HEX = `uniform float hex;
@@ -37,7 +39,7 @@ float hexEdge(vec2 uv){ vec2 r = vec2(1.0, 1.7320508); vec2 h = r * 0.5; vec2 a 
 
 const EARTH_FS = HEAD + `
 uniform sampler2D dayMap; uniform sampler2D nightMap; uniform sampler2D cloudMap; uniform sampler2D specMap; uniform sampler2D normalMap;
-uniform float cloudOffset; uniform float normalScale; uniform float radius; uniform float pink;
+uniform float cloudOffset; uniform float normalScale; uniform float radius; uniform float pink; uniform float cloudK;
 void main(){
   vec3 Ng = normalize(vN); vec3 V = normalize(cameraPosition - vW); vec3 L = normalize(sunPos - vW);
   vec3 mapN = texture2D(normalMap, vUv).xyz * 2.0 - 1.0; vec3 N = perturbN(Ng, mapN, vW, vUv, normalScale);
@@ -47,31 +49,32 @@ void main(){
   float water = texture2D(specMap, vUv).r;
   if (pink > 0.5) {
     float lum = dot(albedo, vec3(0.299, 0.587, 0.114));
-    vec3 sea = mix(vec3(0.98, 0.22, 0.58), vec3(0.62, 0.04, 0.34), smoothstep(0.0, 0.35, lum) * 0.8);
-    vec3 land = vec3(0.97, 0.95, 0.92) * (0.72 + 0.4 * lum);
+    /* the logo's globe: a hot magenta sea (the artwork's is #E722A2) under white land */
+    vec3 sea = mix(vec3(0.52, 0.004, 0.215), vec3(0.37, 0.0, 0.14), smoothstep(0.0, 0.35, lum) * 0.7);
+    vec3 land = vec3(1.0, 0.985, 0.97) * (0.86 + 0.3 * lum);
     albedo = mix(land, sea, smoothstep(0.3, 0.7, water)); city *= vec3(1.0, 0.75, 0.9) * 0.6;
   }
   float cl = texture2D(cloudMap, vec2(vUv.x + cloudOffset - 0.0015, vUv.y + 0.001)).r;
   float day = smoothstep(-0.08, 0.15, nlg);
-  float shadow = 1.0 - cl * 0.5 * day;
+  float shadow = 1.0 - cl * 0.5 * day * cloudK;
   float diffuse = max(mix(nlg, nl, 1.0 - water * 0.8), 0.0);
   vec3 col = albedo * (vec3(0.010, 0.016, 0.030) + diffuse * 1.5) * shadow;
   vec3 H = normalize(L + V); float glint = pow(max(dot(Ng, H), 0.0), 110.0) * water * max(nlg, 0.0) * 0.8;
-  col += vec3(1.0, 0.85, 0.65) * glint;
+  col += vec3(1.0, 0.85, 0.65) * glint * (pink > 0.5 ? 0.22 : 1.0);
   col += city * vec3(1.0, 0.72, 0.40) * 2.4 * (1.0 - smoothstep(-0.2, 0.12, nlg));
   float rim = pow(1.0 - max(dot(Ng, V), 0.0), 3.4);
-  vec3 rimC = pink > 0.5 ? vec3(0.9, 0.2, 0.5) : vec3(0.06, 0.31, 0.65);
+  vec3 rimC = pink > 0.5 ? vec3(0.62, 0.05, 0.3) : vec3(0.06, 0.31, 0.65);
   col += rimC * rim * smoothstep(-0.45, 0.2, nlg) * 0.8;
   float sunset = exp(-abs(nlg) * 22.0) * rim; col += vec3(0.6, 0.3, 0.12) * sunset * 0.18;
-  gl_FragColor = vec4(col, 1.0);` + OUT;
+  gl_FragColor = vec4(look(col), 1.0);` + OUT;
 
-const CLOUD_FS = HEAD + `uniform sampler2D cloudMap; uniform float cloudOffset; uniform vec3 cloudTint;
+const CLOUD_FS = HEAD + `uniform sampler2D cloudMap; uniform float cloudOffset; uniform vec3 cloudTint; uniform float cloudK;
 void main(){
   float c = texture2D(cloudMap, vec2(vUv.x + cloudOffset, vUv.y)).r;
   vec3 L = normalize(sunPos - vW); float nl = dot(normalize(vN), L); float d = max(nl, 0.0);
   vec3 col = vec3(0.012, 0.022, 0.040) + cloudTint * d * 1.6;
   col += vec3(0.7, 0.23, 0.06) * exp(-abs(nl) * 18.0) * 0.08;
-  gl_FragColor = vec4(col, smoothstep(0.12, 0.85, c) * 0.93);` + OUT;
+  gl_FragColor = vec4(look(col), smoothstep(0.12, 0.85, c) * 0.93 * cloudK);` + OUT;
 
 /* the atmosphere seen from outside: a shell well beyond the surface; along each line of sight, the air it passes through
    (densest at the surface, thinning exponentially with height), lit where the sun reaches it, scattered more toward the
@@ -90,7 +93,7 @@ void main(){
   float mu = dot(rd, L); float phase = 0.8 + 0.2 * mu * mu + 0.9 * pow(max(mu, 0.0), 6.0);
   vec3 col = mix(cDusk, cDay, smoothstep(-0.12, 0.28, nl));
   col += cDusk * exp(-abs(nl) * 9.0) * 0.6;                            // the warm band where day turns to night
-  gl_FragColor = vec4(col * dens * lit * phase * strength * 1.25, 1.0);` + OUT;
+  gl_FragColor = vec4(look(col * dens * lit * phase * strength * 1.25), 1.0);` + OUT;
 
 const RING_SHADOW = `uniform float hasRing; uniform sampler2D ringMap; uniform vec3 ringN; uniform vec3 ringC; uniform float ringIn; uniform float ringOut;
 float ringShadow(vec3 p, vec3 L){ if (hasRing < 0.5) return 1.0; float dn = dot(L, ringN); if (abs(dn) < 1e-4) return 1.0;
@@ -116,7 +119,7 @@ void main(){
   float sh = ringShadow(vW, L);
   vec3 col = alb * (0.012 + diff * expo * sh) * limb;
   float rim = pow(1.0 - mu, 3.0) * smoothstep(-0.35, 0.3, nl); col += atmo * rim * atmoAmt;
-  gl_FragColor = vec4(col, 1.0);` + OUT;
+  gl_FragColor = vec4(look(col), 1.0);` + OUT;
 
 const ROCK_FS = HEAD + RAMP + HEX + `uniform sampler2D map; uniform sampler2D normalMap; uniform float normalScale; uniform float detail; uniform vec3 tint; uniform float radius; uniform vec3 atmo; uniform float atmoAmt;
 void main(){
@@ -133,16 +136,16 @@ void main(){
   vec3 col = alb * (0.010 + diff * 1.5);
   float rim = pow(1.0 - mu, 3.2) * smoothstep(-0.3, 0.3, nlg); col += atmo * rim * atmoAmt;
   float dusk = exp(-abs(nlg) * 14.0) * atmoAmt * 0.35; col += atmo * dusk * 0.5;
-  gl_FragColor = vec4(col, 1.0);` + OUT;
+  gl_FragColor = vec4(look(col), 1.0);` + OUT;
 
-const RING_FS = `varying vec2 vUv; varying vec3 vN; varying vec3 vW; uniform sampler2D ringMap; uniform vec3 sunPos; uniform vec3 planetPos; uniform float planetR; uniform float tone;
+const RING_FS = LOOK + `varying vec2 vUv; varying vec3 vN; varying vec3 vW; uniform sampler2D ringMap; uniform vec3 sunPos; uniform vec3 planetPos; uniform float planetR; uniform float tone;
 void main(){
   vec4 tex = texture2D(ringMap, vec2(vUv.x, 0.5));
   vec3 L = normalize(sunPos - vW); float facing = dot(normalize(vN), L);
   float lit = 0.22 + 0.78 * abs(facing);
   vec3 oc = vW - planetPos; float b = dot(oc, L); float c = dot(oc, oc) - planetR * planetR; float sh = 1.0;
   if (b < 0.0) { float d = b * b - c; sh = 1.0 - smoothstep(-planetR * planetR * 0.06, planetR * planetR * 0.06, d) * 0.93; }
-  gl_FragColor = vec4(tex.rgb * lit * sh * tone, tex.a);` + OUT;
+  gl_FragColor = vec4(look(tex.rgb * lit * sh * tone), tex.a);` + OUT;
 
 const STAR_VS = `attribute float size; attribute float phase; attribute vec3 tint; uniform float time; uniform float pr; varying float vA; varying vec3 vT;
 void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); float tw = 0.72 + 0.28 * sin(time * (0.6 + phase * 2.0) + phase * 17.0); vA = tw; vT = tint;
@@ -155,9 +158,9 @@ function shaderMat(fs, uniforms, extra = {}) { return new THREE.ShaderMaterial(O
 const u3 = v => ({ value: new THREE.Vector3(v[0], v[1], v[2]) });
 function rampU(spec) { return { useRamp: { value: spec.ramp ? 1 : 0 }, rampA: u3(spec.ramp ? spec.ramp[0] : [0, 0, 0]), rampB: u3(spec.ramp ? spec.ramp[1] : [1, 1, 1]) }; }
 
-function skyShell(R, a, sunPos, seg) {
+function skyShell(R, a, sunPos, seg, look) {
   const Ra = R * (1 + Math.max(0.1, (a.shell - 1) * 4.5)); // the halo reaches well past the limb
-  const m = shaderMat(SKY_FS, { sunPos: { value: sunPos }, time: { value: 0 }, cDay: u3(a.day), cDusk: u3(a.dusk), strength: { value: a.strength }, centre: { value: new THREE.Vector3() }, R: { value: R * 0.995 }, Ra: { value: Ra }, falloff: { value: 5.5 } },
+  const m = shaderMat(SKY_FS, { sunPos: { value: sunPos }, time: { value: 0 }, sat: look.sat, gain: look.gain, cDay: u3(a.day), cDusk: u3(a.dusk), strength: { value: a.strength }, centre: { value: new THREE.Vector3() }, R: { value: R * 0.995 }, Ra: { value: Ra }, falloff: { value: 5.5 } },
     { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide });
   const mesh = new THREE.Mesh(sphere(Ra, seg), m); mesh.renderOrder = 2;
   mesh.onBeforeRender = () => { mesh.getWorldPosition(m.uniforms.centre.value); };
@@ -173,25 +176,27 @@ function ringGeometry(inner, outer, segs = 256) {
 export function makeWorld(spec, sunPos, { seg = 160 } = {}) {
   const group = new THREE.Group(); const spin = new THREE.Group(); group.add(spin);
   group.rotation.z = spec.tilt || 0;
-  const uniforms = { sunPos: { value: sunPos }, time: { value: 0 } };
+  const look = { sat: { value: 1 }, gain: { value: 1 } };            // shared by every part of this world
+  const uniforms = { sunPos: { value: sunPos }, time: { value: 0 }, sat: look.sat, gain: look.gain };
   let mesh, ring = null, extras = {};
   if (spec.kind === 'earth' || spec.kind === 'pinkEarth') {
     Object.assign(uniforms, { dayMap: { value: mapTex('earth-day') }, nightMap: { value: mapTex('earth-night') }, cloudMap: { value: mapTex('earth-clouds', { colour: false }) },
-      specMap: { value: mapTex('earth-spec', { colour: false }) }, normalMap: { value: mapTex('earth-normal', { colour: false }) }, cloudOffset: { value: 0 }, normalScale: { value: 0.75 }, radius: { value: spec.R }, pink: { value: spec.kind === 'pinkEarth' ? 1 : 0 } });
+      specMap: { value: mapTex('earth-spec', { colour: false }) }, normalMap: { value: mapTex('earth-normal', { colour: false }) }, cloudOffset: { value: 0 }, normalScale: { value: 0.75 }, radius: { value: spec.R }, pink: { value: spec.kind === 'pinkEarth' ? 1 : 0 },
+      cloudK: { value: spec.cloudK === undefined ? 1 : spec.cloudK } });
     mesh = new THREE.Mesh(sphere(spec.R, seg), shaderMat(EARTH_FS, uniforms));
-    const clouds = new THREE.Mesh(sphere(spec.R * 1.006, seg), shaderMat(CLOUD_FS, { sunPos: uniforms.sunPos, time: uniforms.time, cloudMap: uniforms.cloudMap, cloudOffset: uniforms.cloudOffset, cloudTint: u3(spec.cloud || [1, 0.97, 0.91]) }, { transparent: true, depthWrite: false }));
+    const clouds = new THREE.Mesh(sphere(spec.R * 1.006, seg), shaderMat(CLOUD_FS, { sunPos: uniforms.sunPos, time: uniforms.time, sat: look.sat, gain: look.gain, cloudMap: uniforms.cloudMap, cloudOffset: uniforms.cloudOffset, cloudK: uniforms.cloudK, cloudTint: u3(spec.cloud || [1, 0.97, 0.91]) }, { transparent: true, depthWrite: false }));
     clouds.renderOrder = 1; spin.add(clouds);
-    spin.add(skyShell(spec.R, spec.atmo, sunPos, seg));
+    spin.add(skyShell(spec.R, spec.atmo, sunPos, seg, look));
   } else if (spec.kind === 'gas') {
     Object.assign(uniforms, rampU(spec), { map: { value: mapTex(spec.map) }, flow: { value: spec.flow || 0 }, bands: { value: spec.bands || 0 }, storm: { value: spec.storm || 0 }, limbDark: { value: spec.limbDark || 0.4 },
       detail: { value: spec.detail || 0 }, tint: u3(spec.tint || [1, 1, 1]), radius: { value: spec.R }, atmo: u3(spec.atmo.day), atmoAmt: { value: spec.atmo.inner || 0.3 }, expo: { value: spec.expo || 1.45 },
       hasRing: { value: spec.ring ? 1 : 0 }, ringMap: { value: null }, ringN: { value: new THREE.Vector3(0, 1, 0) }, ringC: { value: new THREE.Vector3() }, ringIn: { value: 0 }, ringOut: { value: 0 } });
     mesh = new THREE.Mesh(sphere(spec.R, seg), shaderMat(GAS_FS, uniforms));
-    spin.add(skyShell(spec.R, spec.atmo, sunPos, seg));
+    spin.add(skyShell(spec.R, spec.atmo, sunPos, seg, look));
     if (spec.ring) {
       const rmap = spec.ring.map === 'thin-ring' ? thinRingTex() : mapTex(spec.ring.map);
       uniforms.ringMap.value = rmap; uniforms.ringIn.value = spec.R * spec.ring.inner; uniforms.ringOut.value = spec.R * spec.ring.outer;
-      const rm = shaderMat(RING_FS, { ringMap: { value: rmap }, sunPos: { value: sunPos }, planetPos: { value: new THREE.Vector3() }, planetR: { value: spec.R }, tone: { value: spec.ring.tone } },
+      const rm = shaderMat(RING_FS, { ringMap: { value: rmap }, sat: look.sat, gain: look.gain, sunPos: { value: sunPos }, planetPos: { value: new THREE.Vector3() }, planetR: { value: spec.R }, tone: { value: spec.ring.tone } },
         { transparent: true, side: THREE.DoubleSide, depthWrite: false });
       ring = new THREE.Mesh(ringGeometry(spec.R * spec.ring.inner, spec.R * spec.ring.outer), rm); ring.renderOrder = 1; group.add(ring); extras.ring = ring;
     }
@@ -199,11 +204,11 @@ export function makeWorld(spec, sunPos, { seg = 160 } = {}) {
     Object.assign(uniforms, rampU(spec), { map: { value: mapTex(spec.map) }, normalMap: { value: mapTex(spec.normal, { colour: false }) }, normalScale: { value: spec.normalScale || 0.8 }, detail: { value: spec.detail || 0 },
       tint: u3(spec.tint || [1, 1, 1]), radius: { value: spec.R }, atmo: u3(spec.atmo ? spec.atmo.day : [0, 0, 0]), atmoAmt: { value: spec.atmo ? spec.atmo.inner : 0 }, hex: { value: spec.hex || 0 } });
     mesh = new THREE.Mesh(sphere(spec.R, seg), shaderMat(ROCK_FS, uniforms));
-    if (spec.atmo) spin.add(skyShell(spec.R, spec.atmo, sunPos, seg));
+    if (spec.atmo) spin.add(skyShell(spec.R, spec.atmo, sunPos, seg, look));
   }
   spin.add(mesh);
   const _n = new THREE.Vector3();
-  return { spec, group, spin, mesh, uniforms, extras, R: spec.R,
+  return { spec, group, spin, mesh, uniforms, extras, look, R: spec.R,
     update(dt, time) {
       uniforms.time.value = time; if (spec.spin) spin.rotation.y += spec.spin * dt;
       if (uniforms.cloudOffset) uniforms.cloudOffset.value = time * 0.0005;
@@ -213,7 +218,7 @@ export function makeWorld(spec, sunPos, { seg = 160 } = {}) {
 
 /* a brand moon: the Moon's map with relief, tinted */
 export function makeMoon(m, sunPos, seg = 40) {
-  const uniforms = { sunPos: { value: sunPos }, time: { value: 0 }, map: { value: mapTex('moon') }, normalMap: { value: mapTex('moon-normal', { colour: false }) }, normalScale: { value: 0.9 }, detail: { value: 0.3 },
+  const uniforms = { sunPos: { value: sunPos }, time: { value: 0 }, sat: { value: 1 }, gain: { value: 1 }, map: { value: mapTex('moon') }, normalMap: { value: mapTex('moon-normal', { colour: false }) }, normalScale: { value: 0.9 }, detail: { value: 0.3 },
     tint: u3(m.tint), radius: { value: m.R }, atmo: u3([0, 0, 0]), atmoAmt: { value: 0 }, hex: { value: 0 }, useRamp: { value: 0 }, rampA: u3([0, 0, 0]), rampB: u3([1, 1, 1]) };
   const mesh = new THREE.Mesh(sphere(m.R, seg), shaderMat(ROCK_FS, uniforms)); mesh.rotation.y = m.phase; return mesh;
 }

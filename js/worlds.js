@@ -1,7 +1,9 @@
 /* (From the group site.) The Freedom system, laid out round Freedom Group Enterprise at the centre with the seven operating worlds on the three
    dotted rings: Global on the inner ring in front; Fly (front right), Distribution (back right), Facilities (back left)
    and Form (front left) on the middle ring; Freight (left) and Fuel (right) on the outer ring. Units: Freedom Global's
-   radius is 14. */
+   radius is 14.
+   On this portfolio the worlds are these, but they stand as the group's hierarchy: each on its own ring where the page
+   has left room for it (w-system.js works that out), so the places and rings below are only where they start. */
 
 export const LIGHT_DIR = [-0.42, 0.55, 0.72];
 
@@ -10,8 +12,8 @@ export const RINGS = [155, 230, 372];
 const onRing = (ring, deg) => { const a = deg * Math.PI / 180, r = RINGS[ring]; return [+(Math.cos(a) * r).toFixed(2), 0, +(Math.sin(a) * r).toFixed(2)]; };
 
 export const WORLDS = {
-  enterprise: { kind: 'pinkEarth', R: 20, pos: [0, 0, 0], spin: 0.02, tilt: 0.3, orbitK: 3.0,
-    atmo: { day: [1.0, 0.35, 0.65], dusk: [1.0, 0.62, 0.8], power: 4.4, strength: 0.6, shell: 1.03 }, glow: '#ff5fae', cloud: [1.0, 0.86, 0.93], name: 'Freedom Group Enterprise' },
+  enterprise: { kind: 'pinkEarth', R: 20, pos: [0, 0, 0], spin: 0.02, tilt: 0.3, orbitK: 3.0, cloudK: 0.1,   // little cloud: the logo's globe is sea and land
+    atmo: { day: [1.0, 0.3, 0.62], dusk: [1.0, 0.55, 0.78], power: 4.4, strength: 0.46, shell: 1.03 }, glow: '#ff5fae', cloud: [1.0, 0.86, 0.93], name: 'Freedom Group Enterprise' },
   global: { kind: 'gas', R: 14, pos: onRing(0, 87.8), map: 'neptune', ramp: [[0.12, 0.38, 0.92], [0.88, 0.96, 1.0]], bands: 1.4, storm: 0, flow: 0.004, limbDark: 0.45, detail: 0.5, expo: 1.35, spin: 0.03, tilt: 0.25, orbitK: 2.8,
     atmo: { day: [0.45, 0.72, 1.0], dusk: [0.4, 0.5, 0.95], power: 4.2, strength: 0.6, shell: 1.03, inner: 0.5 }, glow: '#6fb6ff', cloud: [0.7, 0.84, 1.0], name: 'Freedom Global' },
   facilities: { kind: 'rock', R: 11, pos: onRing(1, -115.0), map: 'moon', normal: 'moon-normal', normalScale: 0.7, ramp: [[0.02, 0.26, 0.18], [0.6, 1.0, 0.8]], hex: 1, detail: 0.3, spin: 0.02, tilt: 0.2, orbitK: 2.8,
