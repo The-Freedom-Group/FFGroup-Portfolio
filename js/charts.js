@@ -269,7 +269,10 @@ function mix2036(DATA) {
 function flywheel() {
   const fig = $('#flyWheel'), steps = $$('#flySteps li'); if (!fig || !steps.length) return; const n = steps.length;
   const S = 440, C = S / 2, R = 158, s = svg('svg', { viewBox: `0 0 ${S} ${S}` }, fig), two = i => String(i + 1).padStart(2, '0');
-  /* the two steps that open with a company's name stand on that company's planet (the disc under the picture shows if it is missing) */
+  /* a planet picture that fails to load leaves its company's coloured disc, never a broken-picture mark (here and in the list of companies above) */
+  const bare = im => { im.removeAttribute('srcset'); im.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='; };   // a clear pixel in its place
+  $$('.by-cos img').forEach(im => { if (im.complete && im.getAttribute('src') && !im.naturalWidth) bare(im); else im.addEventListener('error', () => bare(im), { once: true }); });
+  /* the two steps that open with a company's name stand on that company's planet */
   const WORLDS = [[/^Strengthens Freedom Group Enterprise/, 'enterprise', '#FF2D8D'], [/^Freedom Global/, 'global', '#6fb6ff']];
   svg('circle', { cx: C, cy: C, r: R, class: 'fw-ring' }, s);
   /* the stretch of the orbit just travelled: it ends on the stop the story is at */
@@ -279,7 +282,7 @@ function flywheel() {
   const lines = steps.map(li => { const out = ['']; li.textContent.trim().split(/\s+/).forEach(w => { const l = out[out.length - 1]; if (l && (l + ' ' + w).length > 24) out.push(w); else out[out.length - 1] = l ? l + ' ' + w : w; }); return out; });
   const stops = steps.map((li, i) => { const a = -Math.PI / 2 + i / n * Math.PI * 2, cx = Math.cos(a), cy = Math.sin(a), w = WORLDS.find(x => x[0].test(li.textContent.trim()));
     const g = svg('g', { class: 'fw-stop', transform: `translate(${(C + R * cx).toFixed(1)} ${(C + R * cy).toFixed(1)})` }, s);
-    if (w) { svg('circle', { r: 23.5, fill: w[2] }, g); svg('image', { href: `assets/minis/${w[1]}@2x.webp`, x: -25, y: -25, width: 50, height: 50 }, g); svg('circle', { r: 31, class: 'halo' }, g); }
+    if (w) { svg('circle', { r: 23.5, fill: w[2] }, g); const im = svg('image', { href: `assets/minis/${w[1]}@2x.webp`, x: -25, y: -25, width: 50, height: 50 }, g); im.addEventListener('error', () => im.remove(), { once: true }); svg('circle', { r: 31, class: 'halo' }, g); }
     else { svg('circle', { r: 15, class: 'hit' }, g); svg('circle', { r: 6, class: 'dot' }, g); }
     const off = w ? 49 : 27; svg('text', { x: (cx * off).toFixed(1), y: (cy * off + 4).toFixed(1), 'text-anchor': 'middle' }, g, two(i));
     g.addEventListener('pointerenter', () => { set(i); hold = performance.now(); }); return g; });
