@@ -70,13 +70,22 @@ const LABELS = [['enterprise', 'Enterprise', 'Holding', '#FF2D8D', 0], ['global'
   ['form', 'Form', '2029', '#f2c94c', 4], ['freight', 'Freight', '2029', '#e9b86a', 4], ['fly', 'Fly', '2030+', '#b48cff', 5], ['fuel', 'Fuel', '2030+', '#7d8cff', 5]];
 const labels = LABELS.map(([id, name, tag, c, step]) => { const n = el('button.lb', { type: 'button', tabindex: -1, style: '--c:' + c, onclick: () => stepTo(step) }, name, el('em', { text: tag })); $('#sysLabels').append(n); return { id, n, step }; });
 
-/* 05 the map: nine territories */
-const mpItems = $$('#mpList li'), mpList = $('#mpList'); let mpPin = -1, mpHold = 0;
-const MAP_A = 0.1, MAP_B = 0.92;
-const mpTags = mpItems.map((li, i) => { const t = el('span.tg' + (li.classList.contains('primary') ? '.primary' : ''), { text: $('b', li).textContent }); $('#mpTags').append(t); return t; });
-function setPin(i, scrollList) { if (i === mpPin) return; mpPin = i; mpItems.forEach((li, k) => li.classList.toggle('on', k === i)); mpTags.forEach((t, k) => t.classList.toggle('on', k === i));
-  if (scrollList && i >= 0 && vw < 900) { const li = mpItems[i]; mpList.scrollTo({ left: li.offsetLeft - (mpList.clientWidth - li.clientWidth) / 2, behavior: 'smooth' }); } if (i >= 0 && sound) sound.tick(); }
-mpItems.forEach((li, i) => $('button', li).addEventListener('click', () => { const s = byId.map; measure(); if (!GL) return; const p = MAP_A + (i + 0.5) / mpItems.length * (MAP_B - MAP_A); scrollTo({ top: s.top + p * (s.h - vh), behavior: STILL ? 'auto' : 'smooth' }); }));
+/* 05 the map: nine territories, nearest Bury first. Each is a card joined to its pin on the globe by a fine line; the same
+   list is what a keyboard walks, and where there is no room beside the globe it is stepped through one card at a time */
+const mpItems = $$('#mpList li'), mpList = $('#mpList'), mpN = mpItems.length; let mpPin = -1;
+const MAP_A = 0.44, MAP_B = 0.895;                              // the stretch of the map scene the nine stops share (before it: the rise, the turn by day, nightfall)
+const mpDeck = matchMedia('(max-width: 1199px), (max-height: 599px)');
+/* pressing a territory (its card, its pin, or the steps) takes the story to it, and the globe comes round */
+function mapTo(i) { if (!GL) return; const s = byId.map; measure(); scrollTo({ top: s.top + (MAP_A + (clamp(i, 0, mpN - 1) + 0.5) / mpN * (MAP_B - MAP_A)) * (s.h - vh), behavior: STILL ? 'auto' : 'smooth' }); }
+const mpLines = mpItems.map(li => svg('line', { class: li.classList.contains('primary') ? 'primary' : null }, $('#mpLines')));
+const mpPins = mpItems.map((li, i) => { const b = el('button.xm-pin' + (li.classList.contains('primary') ? '.primary' : ''), { type: 'button', tabindex: -1, onclick: () => mapTo(i) }); const s = svg('svg', { viewBox: '0 0 18 24' }, b); svg('path', { d: 'M9 23.2 3.6 11.4A6.6 6.6 0 1 1 14.4 11.4Z' }, s); svg('circle', { cx: 9, cy: 7.6, r: 2.3 }, s); $('#mpPins').append(b); return b; });
+mpItems.forEach((li, i) => { const b = $('button', li); b.addEventListener('click', () => mapTo(i)); b.addEventListener('focus', () => { if (GL && i !== mpPin && b.matches(':focus-visible')) mapTo(i); }); });
+const mpStep = $('#mpStep'), mpCount = el('b', { text: '1' });
+{ const arrow = (d, label, by) => { const b = el('button', { type: 'button', 'aria-label': label, onclick: () => mapTo(Math.max(0, mpPin) + by) }); svg('path', { d }, svg('svg', { viewBox: '0 0 14 14', 'aria-hidden': 'true' }, b)); return b; };
+  mpStep.append(arrow('M9 2 4 7l5 5', 'The territory before', -1), el('p', null, mpCount, ' / ' + mpN), arrow('M5 2l5 5-5 5', 'The next territory', 1));
+  let x0 = 0, y0 = 0; mpList.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });    // a swipe across the card steps too
+  mpList.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; if (mpDeck.matches && Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.4) mapTo(Math.max(0, mpPin) + (dx < 0 ? 1 : -1)); }, { passive: true }); }
+function setPin(i) { if (i === mpPin) return; mpPin = i; [mpItems, mpPins, mpLines].forEach(set => set.forEach((n, k) => n.classList.toggle('on', k === i))); if (i >= 0) { mpCount.textContent = i + 1; if (sound) sound.tick(); } }
 
 const heroCopy = $('.hero-copy'), kpis = $('#kpis'), mark = $('#mark'), cue = $('.cue'), markO = $('#markO');
 const focusBox = $('#focusBox'), mp = $('#mp'), rsHead = $('#rs .sh'), rsCards = $$('#rsCards li'), rsMech = $('#rsMech'), loClose = $('.lo-close'), loCtl = $('#loCtl');
@@ -92,9 +101,8 @@ function drive() {
   setSysStep(S <= 0 || S > 0.9 ? (S > 0.9 ? -1 : 0) : clamp(Math.floor((S - SYS_A) / (SYS_B - SYS_A) * SYS.length), 0, SYS.length - 1));
   /* the way down: the investment focus rides the clouds */
   k = span(F, 0.06, 0.2); const out = span(F, 0.6, 0.76); setOT(focusBox, k * (1 - out), 0); focusBox.style.transform = `translate(-50%,calc(-50% + ${(70 * (1 - k) - 120 * out).toFixed(1)}px))`;
-  /* 05: the map */
-  setOT(mp, byId.map.on ? span(byId.map.pe, -0.03, 0.04) * (1 - span(M, 0.955, 1.0)) : 0, 0);
-  if (performance.now() - mpHold > 900) setPin(M < 0.04 || !byId.map.on ? -1 : clamp(Math.floor((M - MAP_A) / (MAP_B - MAP_A) * mpItems.length), 0, mpItems.length - 1), true);
+  /* 05: the map: which territory the story is on (the cards, pins and ink follow the globe, in placeMap) */
+  setPin(!byId.map.on || M < MAP_A - 0.012 || M > MAP_B + 0.06 ? -1 : clamp(Math.floor((M - MAP_A) / (MAP_B - MAP_A) * mpN), 0, mpN - 1));
   /* 09: the raise */
   const rOn = byId.raise.on ? 1 - span(R, 0.93, 0.995) : 0, rIn = span(byId.raise.pe, -0.03, 0.05); setOT(rsHead, rIn * rOn, 24 * (1 - rIn));
   rsCards.forEach((c, i) => { const a = span(R, 0.1 + i * 0.115, 0.17 + i * 0.115); setOT(c, a * rOn, 0, 60 * (1 - a)); });
@@ -150,13 +158,21 @@ function sysRoom() {   /* measured inside the stage, as if it were already pinne
     room.x0 = 4; room.x1 = vw - 4; room.y0 = top + 44; room.y1 = Math.max(top + 170, c.top - o - 6); }
   else { const h = sysHead.getBoundingClientRect(); room.x0 = Math.min(vw * 0.44, h.left + 480); room.x1 = vw - 58; room.y0 = h.top - o - 20; room.y1 = h.top - o + vh - 150; }
 }
-/* and the part the globe may fill at the map: between the words and the list, whichever way they are laid out */
-const globeRoom = { x0: 0, y0: 0, x1: 1, y1: 1 }, mpHead = $('.mp .sh'), mpLegend = $('.mp-legend');
+/* and at the map: where the globe stands on the stage (under the words, as large as the room allows) and where each card
+   goes: Europe's five down the left of it and Asia's four down the right, or all nine in one place below it */
+const globeRoom = { cx: 0, cy: 0, r: 100, cols: true, a: MAP_A, b: MAP_B }, mpHead = $('.xm .sh'), mpSlots = mpItems.map(() => ({ x: 0, y: 0, w: 0, h: 0 })); let mpKey = '';
 function mapRoom() {
-  const o = mapStage.getBoundingClientRect().top, h = mpHead.getBoundingClientRect(), l = mpList.getBoundingClientRect(), g = globeRoom, ht = h.top - o, hb = h.bottom - o;
-  if (vw < 900) { g.x0 = 0; g.x1 = vw; g.y0 = hb + 6; g.y1 = Math.max(hb + 150, l.top - o - 8); }
-  else if (l.left > h.right + 80) { g.x0 = h.right + 10; g.x1 = l.left - 34; g.y0 = ht; g.y1 = ht + vh - 130; }
-  else { g.x0 = Math.max(h.right, l.right) + 44; g.x1 = vw - 60; g.y0 = ht - 10; g.y1 = ht + vh - 120; }
+  const st = mapStage.getBoundingClientRect(), H = st.height, hb = mpHead.getBoundingClientRect().bottom - st.top, g = globeRoom, cols = g.cols = !mpDeck.matches, ch = Math.max(...mpItems.map(li => li.offsetHeight)), pe = byId.map.pe;
+  const deckK = cols ? 0 : span(pe, MAP_A - 0.07, MAP_A - 0.012) * (1 - span(pe, MAP_B + 0.02, MAP_B + 0.07));          // below the globe, the card takes its room only while there are cards
+  const y0 = hb + (cols ? 14 : 10), y1 = cols ? H - 20 : lerp(H - 18, mpList.offsetTop - 16, deckK), gut = mpHead.offsetLeft;
+  g.cx = vw / 2; g.cy = (y0 + y1) / 2; g.r = Math.max(60, Math.min((y1 - y0) / 2.16, cols ? (vw - 2 * gut - 2 * 264 - 2 * 60) / 2 : vw / 2 - Math.max(22, vw * 0.06)));
+  mpStep.style.opacity = deckK.toFixed(3); mpStep.style.pointerEvents = deckK < 0.5 ? 'none' : '';
+  const key = [vw, Math.round(H), Math.round(hb), cols, ch].join(); if (key === mpKey) return; mpKey = key;
+  const gap = clamp(g.r * 0.2, 48, 96), cw = clamp(vw / 2 - g.r - gap - gut, 264, 340), gapY = Math.max(6, Math.min(g.r * 0.34, (y1 - y0 - ch) / 4) - ch);   // spaced in step with the globe, so the lines fan the same way at every size (and never cross)
+  g.top = y0 - 4;
+  let nL = 0, nR = 0; mpItems.forEach((li, i) => { const s = mpSlots[i], left = s.left = li.classList.contains('eu'), n = left ? 5 : 4, k = left ? nL++ : nR++;
+    if (cols) { s.w = cw; s.h = ch; s.x = left ? vw / 2 - g.r - gap - cw : vw / 2 + g.r + gap; s.y = clamp(g.cy - (n * ch + (n - 1) * gapY) / 2, y0, Math.max(y0, H - 12 - n * ch - (n - 1) * gapY)) + k * (ch + gapY); li.style.width = cw + 'px'; li.style.left = s.x.toFixed(1) + 'px'; li.style.top = s.y.toFixed(1) + 'px'; }
+    else { li.style.width = li.style.left = li.style.top = ''; s.x = mpList.offsetLeft + li.offsetLeft; s.y = mpList.offsetTop + li.offsetTop; s.w = li.offsetWidth; s.h = li.offsetHeight; } });
 }
 /* and where the rocket may stand on a phone: under the closing words, then above mission control */
 const padRooms = { a0: 0, a1: 1, b0: 0, b1: 1 };
@@ -165,7 +181,35 @@ function padRoom() { padRooms.a0 = loClose.offsetTop + loClose.offsetHeight + 14
 function placeTags() {
   const out = world.out; if (!out) return;
   labels.forEach(l => { const o = out.labels[l.id]; if (!o || o.a < 0.02) { l.n.style.opacity = 0; l.n.style.visibility = 'hidden'; return; } l.n.style.visibility = 'visible'; l.n.style.opacity = o.a.toFixed(2); l.n.style.transform = `translate3d(${o.x.toFixed(1)}px,${o.y.toFixed(1)}px,0) translate(-50%,-100%)`; });
-  mpTags.forEach((t, i) => { const o = out.pins[i]; if (!o || o.a < 0.02) { t.style.opacity = 0; t.style.visibility = 'hidden'; return; } t.style.visibility = 'visible'; t.style.opacity = o.a.toFixed(2); t.style.transform = `translate3d(${o.x.toFixed(1)}px,${o.y.toFixed(1)}px,0) translate(${o.left ? '-100%' : '0'},-50%)`; });
+  placeMap();
+}
+/* the map's furniture follows its globe: the ink of the words (dark on the white sheet, light once its night has fallen),
+   the bar across the top with it, and each territory's pin, card and the line between them while the globe shows it */
+const MP_INK = [['--fg', [16, 16, 16], [244, 241, 235]], ['--fg2', [74, 74, 70], [180, 177, 170]], ['--fg3', [110, 108, 102], [138, 135, 129]], ['--hot-t', [198, 15, 110], [255, 45, 141]]]; let mpInk = -1;
+function placeMap() {
+  const M = byId.map, o = world.map, live = M.on && world.mode === 'globe' && o && o.live;
+  setOT(mp, live ? 1 - span(M.pe, MAP_B + 0.005, MAP_B + 0.06) : 0); if (!live) return;
+  /* the words go out with the light and come back with the night, changing ink while they are away (halfway down, the sheet is the grey of either ink) */
+  const n = o.night, lit = n < 0.5 ? 0 : 1; if (lit !== mpInk) { mpInk = lit; MP_INK.forEach(([k, a, b]) => mp.style.setProperty(k, 'rgb(' + (lit ? b : a).join() + ')')); }
+  mpHead.style.opacity = Math.max(1 - span(n, 0.04, 0.42), span(n, 0.6, 0.98)).toFixed(3);
+  if (syS + 32 >= M.top && syS + 32 < M.top + M.h) { const want = lit ? 'dark' : 'light'; if (body.dataset.nav !== want) body.dataset.nav = want; }
+  /* beside the globe, a column of cards moves up to stay level with the pins of the cards it is still showing (as far as
+     the words above allow), so when its upper cards have gone the ones left sit by their own pins; the order never changes */
+  const cols = globeRoom.cols, ride = [0, 0];
+  if (cols) for (const left of [true, false]) { let sa = 0, sy = 0, lo = -1e9;
+    mpSlots.forEach((s, i) => { if (s.left !== left) return; const a = o.pins[i].a; sa += a; sy += a * (o.pins[i].y - 15.6 - s.y - s.h / 2); lo = Math.max(lo, globeRoom.top - s.y - (1 - Math.min(1, a * 24)) * 3000); });
+    if (sa > 0.0005) ride[left ? 0 : 1] = Math.max(lo, Math.min(0, sy / sa)); }
+  mpItems.forEach((li, i) => {
+    const p = o.pins[i], s = mpSlots[i], on = i === mpPin, a = cols ? p.a : on ? p.k : 0, pa = cols || on ? p.a : 0, pin = mpPins[i], ln = mpLines[i];
+    const dx = cols ? (1 - a) * (s.left ? -14 : 14) : 0, dy = cols ? ride[s.left ? 0 : 1] : (1 - a) * 14;      // a card comes in from the edge it stands by (from below, where there is one at a time)
+    li.style.opacity = a.toFixed(3); li.style.transform = `translate3d(${dx.toFixed(1)}px,${dy.toFixed(1)}px,0)`; li.style.pointerEvents = a < 0.4 ? 'none' : '';
+    pin.style.opacity = pa.toFixed(3); pin.style.visibility = pa < 0.01 ? 'hidden' : 'visible'; if (pa >= 0.01) pin.style.transform = `translate3d(${(p.x - 12).toFixed(1)}px,${(p.y - 30).toFixed(1)}px,0)`;
+    const la = Math.min(a, pa); ln.style.opacity = la.toFixed(3); if (la < 0.01) return;
+    /* from the card's edge nearest the globe to the pin: to its head beside the globe, to its foot from below it */
+    let x1, y1, x2, y2; if (cols) { x1 = (s.left ? s.x + s.w : s.x) + dx; y1 = s.y + s.h / 2 + dy; x2 = p.x; y2 = p.y - 15.6; const d = Math.hypot(x2 - x1, y2 - y1) || 1, cut = on ? 9.6 : 7.8; x2 -= (x2 - x1) / d * cut; y2 -= (y2 - y1) / d * cut; }
+    else { x1 = clamp(p.x, s.x + 18, s.x + s.w - 18); y1 = s.y + dy; x2 = p.x; y2 = p.y + 4; }
+    ln.setAttribute('x1', x1.toFixed(1)); ln.setAttribute('y1', y1.toFixed(1)); ln.setAttribute('x2', x2.toFixed(1)); ln.setAttribute('y2', y2.toFixed(1));
+  });
 }
 
 /* ───────── liftoff ───────── */

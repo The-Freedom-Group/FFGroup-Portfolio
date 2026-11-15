@@ -304,30 +304,27 @@
 <!-- ═════════ 05 · the expansion map ═════════ -->
 <section id="map" class="scene" data-world="globe" data-theme="dark" data-no="05" data-name="The expansion map">
   <div class="stage">
-    <div class="mp" id="mp">
+    <div class="xm" id="mp">
       <header class="sh">
         <p class="kick"><b>05</b> The expansion map</p>
-        <h2>Built in Britain. Sourced globally. <em>Designed to scale internationally.</em></h2>
-        <p class="lede">Nine territories already power the supply chain.</p>
+        <h2>Built in Britain. Sourced Globally. <em>Designed to Scale Internationally.</em></h2>
+        <p class="lede">Nine territories already power the group's supply chain — where products originate, where they are stored and fulfilled, where customers sit, and where the business goes next.</p>
       </header>
-      <ul class="mp-legend">
-        <li><b>Supply</b><span>Where products originate</span></li>
-        <li><b>Infrastructure</b><span>Where products are stored and fulfilled</span></li>
-        <li><b>Demand</b><span>Where customers and future markets sit</span></li>
-        <li><b>Expansion</b><span>Where the business plans to go next</span></li>
-      </ul>
-      <ol class="mp-list" id="mpList">
-        <li data-pin="0"><button type="button"><i>HQ</i><b>United Kingdom</b><span>Import &amp; fulfilment</span><em>Bury HQ, stockholding and national dispatch</em></button></li>
-        <li data-pin="1"><button type="button"><i>Supply</i><b>Poland</b><span>Extinguishers</span><em>European production and short haul freight</em></button></li>
-        <li data-pin="2"><button type="button"><i>Supply</i><b>Belgium</b><span>Batteries</span><em>Sourcing for Voltz and Kunergy</em></button></li>
-        <li data-pin="3"><button type="button"><i>Supply</i><b>Italy</b><span>Plastics</span><em>Plastics, housing and fittings</em></button></li>
-        <li data-pin="4"><button type="button"><i>Supply</i><b>Turkey</b><span>PPE</span><em>Gloves, workwear and protective equipment</em></button></li>
-        <li data-pin="5" class="primary"><button type="button"><i>Primary</i><b>China</b><span>Primary region of manufacturing</span><em>30 plus suppliers</em></button></li>
-        <li data-pin="6"><button type="button"><i>Supply</i><b>Pakistan</b><span>PPE</span><em>Gloves and protective textiles</em></button></li>
-        <li data-pin="7"><button type="button"><i>Supply</i><b>Taiwan</b><span>PPE</span><em>Precision technical safety equipment</em></button></li>
-        <li data-pin="8"><button type="button"><i>Supply</i><b>Malaysia</b><span>PPE</span><em>Gloves, workwear and protective equipment</em></button></li>
+      <!-- the nine territories, nearest Bury first: a card each, joined to its pin on the globe; the same list is what a keyboard walks and a phone steps through -->
+      <svg class="xm-lines" id="mpLines" aria-hidden="true"></svg>
+      <ol class="xm-list" id="mpList">
+        <li class="eu"><button type="button"><b>United Kingdom</b><i>HQ</i><span>Import &amp; fulfilment</span><em>Bury HQ, stockholding and national dispatch</em></button></li>
+        <li class="eu"><button type="button"><b>Belgium</b><i>SUPPLY</i><span>Batteries</span><em>Sourcing for Voltz and Kunergy</em></button></li>
+        <li class="eu"><button type="button"><b>Poland</b><i>SUPPLY</i><span>Extinguishers</span><em>European production and short haul freight</em></button></li>
+        <li class="eu"><button type="button"><b>Italy</b><i>SUPPLY</i><span>Plastics</span><em>Plastics, housing and fittings</em></button></li>
+        <li class="eu"><button type="button"><b>Turkey</b><i>SUPPLY</i><span>PPE</span><em>Gloves, workwear and protective equipment</em></button></li>
+        <li class="as"><button type="button"><b>Pakistan</b><i>SUPPLY</i><span>PPE</span><em>Gloves and protective textiles</em></button></li>
+        <li class="as primary"><button type="button"><b>China</b><i>PRIMARY</i><span>Primary Region of Manufacturing</span><em>30 Plus Suppliers</em></button></li>
+        <li class="as"><button type="button"><b>Taiwan</b><i>SUPPLY</i><span>PPE</span><em>Precision technical safety equipment</em></button></li>
+        <li class="as"><button type="button"><b>Malaysia</b><i>SUPPLY</i><span>PPE</span><em>Gloves, workwear and protective equipment</em></button></li>
       </ol>
-      <div class="mp-tags" id="mpTags" aria-hidden="true"></div>
+      <div class="xm-pins" id="mpPins" aria-hidden="true"></div>
+      <div class="xm-step" id="mpStep"></div>
     </div>
   </div>
 </section>
