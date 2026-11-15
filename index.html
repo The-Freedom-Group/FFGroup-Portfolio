@@ -59,17 +59,20 @@
   </a>
   <p class="nv-now" aria-hidden="true"><b id="nvNo">00</b><span id="nvName">Start</span></p>
   <nav class="nv-links" aria-label="Sections">
-    <a href="#system">System</a>
+    <a href="#system">The System</a>
     <a href="#journey">Journey</a>
     <a href="#traction">Traction</a>
-    <a href="#plan">Growth plan</a>
-    <a href="#crew">Team</a>
+    <a href="#map">Opportunity</a>
+    <a href="#plan">Growth Plan</a>
+    <a href="#horizon">Beyond</a>
     <a href="#raise">Investment</a>
   </nav>
   <div class="nv-tools">
-    <button class="nv-sound" id="soundBtn" type="button" aria-pressed="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="sl">Sound off</span></button>
     <a class="nv-cta" href="#liftoff" data-magnet>Liftoff</a>
-    <button class="nv-menu" id="menuBtn" type="button" aria-haspopup="dialog" aria-controls="menu"><span aria-hidden="true"></span><b>Index</b></button>
+    <button class="nv-sound" id="soundBtn" type="button" aria-pressed="true" aria-label="Sound, on">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M3.5 9.6h3.1l4.4-3.7v12.2l-4.4-3.7H3.5z"/><path class="wv" d="M14.6 9.3a4 4 0 0 1 0 5.4M17.3 6.6a7.8 7.8 0 0 1 0 10.8"/><path class="mu" d="M15 9.5l5 5M20 9.5l-5 5"/></svg>
+    </button>
+    <button class="nv-menu" id="menuBtn" type="button" aria-label="Index" aria-haspopup="dialog" aria-controls="menu"><span aria-hidden="true"></span><b>Index</b></button>
   </div>
 </header>
 
@@ -599,10 +602,57 @@
 
 </main>
 
+<!-- the ground under the pad: the group's mark, the parts of the story, the group's other places, the company -->
 <footer id="foot">
-  <p>© 2026 Freedom Group Enterprise</p>
-  <p class="ft-links"><a href="https://thefreedomgroup.global/" target="_blank" rel="noopener">The group system ↗</a><a href="https://tomletcher.co.uk/" target="_blank" rel="noopener">Tom Letcher ↗</a></p>
-  <p class="ft-credit">Planet maps: Solar System Scope, CC BY 4.0</p>
+  <div class="ft-head">
+    <a class="ft-brand" href="#top" aria-label="The Freedom Group, back to the start">
+      <img src="assets/brand/globe-96.png" width="52" height="52" alt="" loading="lazy">
+      <span class="ft-word">THE FREEDOM <i>GROUP</i></span>
+    </a>
+    <a class="ft-top" href="#top" data-magnet>Back to the top<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 13V1M2 6l5-5 5 5"/></svg></a>
+  </div>
+  <div class="ft-grid">
+    <nav class="ft-col ft-story" aria-labelledby="ftStory">
+      <h2 class="kick" id="ftStory">The story</h2>
+      <!-- the same parts, names and numbers as the index; the page rewrites this list from its sections when scripts run -->
+      <ol id="footList">
+        <li><a href="#top"><i>00</i>Start</a></li>
+        <li><a href="#system"><i>01</i>The system</a></li>
+        <li><a href="#journey"><i>02</i>The journey</a></li>
+        <li><a href="#traction"><i>03</i>Traction</a></li>
+        <li><a href="#market"><i>04</i>The market</a></li>
+        <li><a href="#map"><i>05</i>The expansion map</a></li>
+        <li><a href="#plan"><i>06</i>The growth plan</a></li>
+        <li><a href="#horizon"><i>07</i>The 2036 horizon</a></li>
+        <li><a href="#crew"><i>08</i>The team</a></li>
+        <li><a href="#raise"><i>09</i>The raise</a></li>
+        <li><a href="#beyond"><i>10</i>Beyond Freedom Global</a></li>
+        <li><a href="#liftoff"><i>11</i>Liftoff</a></li>
+      </ol>
+    </nav>
+    <nav class="ft-col ft-group" aria-labelledby="ftGroup">
+      <h2 class="kick" id="ftGroup">The group</h2>
+      <ul>
+        <li><a href="https://thefreedomgroup.global/" target="_blank" rel="noopener">The group system ↗</a></li>
+        <li><a href="https://tomletcher.co.uk/" target="_blank" rel="noopener">Tom Letcher ↗</a></li>
+      </ul>
+    </nav>
+    <div class="ft-col ft-co">
+      <h2 class="kick" id="ftCo">The company</h2>
+      <address aria-labelledby="ftCo">
+        <b>Freedom Fire &amp; Safety Ltd</b>
+        <span>Company number 13589467</span>
+        <span>Registered in England and Wales</span>
+        <span>Unit 19, Pilsworth Industrial Estate, Bury, BL9 8RE</span>
+        <a href="mailto:info@freedom-fire.co.uk">info@freedom-fire.co.uk</a>
+      </address>
+    </div>
+  </div>
+  <div class="ft-base">
+    <p class="ft-c">© 2026 Freedom Group Enterprise</p>
+    <p class="ft-note">The forward-looking figures on this page are targets and illustrations, not a valuation or an offer.</p>
+    <p class="ft-credit">Planet maps: Solar System Scope, CC BY 4.0</p>
+  </div>
 </footer>
 
 <!-- photos, full size -->

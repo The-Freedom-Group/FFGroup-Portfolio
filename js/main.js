@@ -31,29 +31,113 @@ const parts = sections.filter(s => s.id !== 'focus');           // what the inde
 let vh = innerHeight, vw = innerWidth;
 function measure() { vh = innerHeight; vw = innerWidth; const sy = scrollY; sections.forEach(s => { const r = s.sec.getBoundingClientRect(); s.top = r.top + sy; s.h = r.height; }); }
 
+const partLink = s => el('li', null, el('a', { href: '#' + s.id }, el('i', { text: s.no }), s.name));
 const menu = $('#menu'), menuList = $('#menuList');
-parts.forEach(s => menuList.append(el('li', null, el('a', { href: '#' + s.id }, el('i', { text: s.no }), s.name))));
+menuList.append(...parts.map(partLink));
 $('#menuBtn').addEventListener('click', () => menu.showModal());
+{ const fl = $('#footList'); if (fl) fl.replaceChildren(...parts.map(partLink)); }   // the footer lists the same parts under the same names and numbers
+/* the bar's links: a part lights its own link, or the nearest link before it */
+const navLinks = $$('.nv-links a, .nv-cta'), navOf = {}; { let cur = null; parts.forEach(s => { cur = navLinks.find(a => a.getAttribute('href') === '#' + s.id) || cur; navOf[s.id] = cur; }); }
 
+/* the rail: a tick where each part starts, the ground at the end, and the rocket, which is a handle */
 const rail = $('#rail'), railOl = el('ol');
-const rocket = el('span.rk', { 'aria-hidden': 'true' }); { const s = svg('svg', { viewBox: '0 0 13 26' }, rocket); svg('path', { d: 'M6.5 0C9.6 3.4 10.6 7.4 10.6 12v6.2H2.4V12C2.4 7.4 3.4 3.4 6.5 0Z', fill: 'currentColor' }, s); svg('path', { d: 'M2.4 13.5 0 19.5h2.4ZM10.6 13.5l2.4 6h-2.4Z', fill: 'currentColor', opacity: '.7' }, s); svg('path', { d: 'M4.4 19.4h4.2L6.5 26Z', fill: '#F4F1EB' }, s); svg('circle', { cx: 6.5, cy: 8.4, r: 1.7, fill: '#101010' }, s); }
+const rkNo = el('b'), rkName = el('span');
+const rocket = el('div.rk', { role: 'slider', tabindex: '0', 'aria-label': 'Place in the story', 'aria-orientation': 'vertical', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0', 'data-cursor': 'Drag' }, el('span.rk-tag', { 'aria-hidden': 'true' }, rkNo, rkName));
+{ const s = svg('svg', { viewBox: '0 0 13 26', 'aria-hidden': 'true' }, rocket); svg('path', { d: 'M6.5 0C9.6 3.4 10.6 7.4 10.6 12v6.2H2.4V12C2.4 7.4 3.4 3.4 6.5 0Z', fill: 'currentColor' }, s); svg('path', { d: 'M2.4 13.5 0 19.5h2.4ZM10.6 13.5l2.4 6h-2.4Z', fill: 'currentColor', opacity: '.7' }, s); svg('path', { d: 'M4.4 19.4h4.2L6.5 26Z', fill: '#F4F1EB' }, s); svg('circle', { cx: 6.5, cy: 8.4, r: 1.7, fill: '#101010' }, s); }
 const railItems = parts.map(s => { const li = el('li', null, el('a', { href: '#' + s.id, 'aria-label': s.no + ' ' + s.name }, el('span', { text: s.name }), el('i'))); railOl.append(li); return li; });
 rail.append(railOl, rocket);
 
 /* where a move to a part lands: its top, or, where the part says so (data-land), that far through its pinned scene, so a
    link to the investment focus arrives on the screen itself and not in the cloud before it */
 const landAt = s => Math.round(s.top + (+s.sec.dataset.land || 0) * Math.max(0, s.h - vh));
+/* Two matching lists: how far down the page each part starts (the last entry is the end of the page), and how far down
+   the rail its tick sits (the last entry is the ground). Between two ticks the rail and the page move in step, so each
+   is the exact inverse of the other: the rocket on a tick is the page at that part's start. Every stretch of rail has
+   a least length, and the rest is shared out by how long each part is, so the long journey gets a long stretch. */
+const RL = { ys: [0, 1], rs: [0, 1], max: 1 };
+const seg = (list, v) => { let i = 0; while (i < list.length - 2 && v >= list[i + 1]) i++; return i; };
+const across = (from, to, v) => { const i = seg(from, v), d = from[i + 1] - from[i]; return lerp(to[i], to[i + 1], d > 0 ? clamp((v - from[i]) / d) : 0); };
+const railAt = y => across(RL.ys, RL.rs, y), pageAt = r => across(RL.rs, RL.ys, r);
+function railLayout() {
+  measure(); const n = parts.length, max = Math.max(1, Math.round(document.documentElement.scrollHeight - vh));
+  const ys = parts.map(s => clamp(Math.round(s.top), 0, max)); ys.push(max); for (let i = 1; i <= n; i++) ys[i] = Math.max(ys[i], ys[i - 1]);
+  const H = clamp(vh * 0.62, 250, 620), least = 14, at = [16]; for (let i = 0; i < n; i++) at.push(at[i] + least + (H - least * n) * (ys[i + 1] - ys[i]) / max);
+  const rs = at.map(v => Math.round(v) + 0.5);                    // each tick on a whole pixel row, so its line is drawn sharp
+  RL.ys = ys; RL.rs = rs; RL.max = max;
+  railItems.forEach((li, i) => { const hit = clamp(Math.min(i ? rs[i] - rs[i - 1] : 30, rs[i + 1] - rs[i]), 14, 30), odd = hit % 2 ? hit : hit - 1; li.style.top = (rs[i] - odd / 2) + 'px'; li.style.height = odd + 'px'; });
+  const tall = Math.round(rs[n]) + 16; railOl.style.height = tall + 'px'; railOl.style.setProperty('--r0', rs[0] + 'px'); railOl.style.setProperty('--rn', rs[n] + 'px');
+  rail.style.setProperty('--rt', Math.round((vh + 38 - tall) / 2) + 'px'); rail.classList.add('laid');   // centred in the room under the bar, on a whole pixel
+}
+railLayout(); addEventListener('resize', railLayout); if (document.fonts && document.fonts.ready) document.fonts.ready.then(railLayout);
+if ('ResizeObserver' in window) { const ro = new ResizeObserver(railLayout); ro.observe($('#main')); ro.observe($('#foot')); }
+
+/* each frame: the rocket sits where the page is (or under the hand that holds it), and says which part it is over */
+let pull = null, railR = -1, rkPart = -1, rkNow = -1;
+function railFrame(sy) {
+  const r = pull ? pull.r : railAt(sy);
+  if (r !== railR) { railR = r; rocket.style.transform = `translateY(${r.toFixed(2)}px)`; }
+  const i = Math.min(parts.length - 1, seg(RL.rs, r + 0.05)), now = Math.round(clamp((pull ? pageAt(r) : sy) / RL.max) * 100);
+  if (i !== rkPart) { rkPart = i; const s = parts[i]; rkNo.textContent = s.no; rkName.textContent = s.name; rocket.setAttribute('aria-valuetext', s.no + ' ' + s.name);
+    railItems.forEach((li, k) => { li.classList.toggle('on', k === i); if (k === i) li.firstChild.setAttribute('aria-current', 'true'); else li.firstChild.removeAttribute('aria-current'); }); }
+  if (now !== rkNow) { rkNow = now; rocket.setAttribute('aria-valuenow', now); }
+}
+/* pulling it: the page is scrolled to wherever the rocket is held, at once, so the story scrubs under the hand */
+function pullTo(clientY) {
+  if (Math.abs(clientY - pull.y0) > 2) pull.moved = true; if (!pull.moved) return;
+  let r = clamp(clientY - pull.top - pull.grab, RL.rs[0], RL.rs[RL.rs.length - 1]);
+  for (const t of RL.rs) if (Math.abs(r - t) < 0.8) r = t;       // a mouse moves a whole pixel at a time: on a tick's row it is on the tick, so a pull to a tick is that part's exact start
+  const y = Math.round(pageAt(r)); pull.r = r;
+  scrollTo({ top: y, behavior: 'instant' });
+  /* the scenes ease toward the scroll; on a long pull they are kept within a screen and a half of it, so they stay with the hand */
+  const lag = y - syS, most = vh * 1.5; if (Math.abs(lag) > most) syS = y - Math.sign(lag) * most;
+}
+function pullEnd(e) {
+  if (!pull || (e && e.pointerId !== undefined && e.pointerId !== pull.id)) return;
+  const id = pull.id, pressed = !pull.moved && e && e.type === 'pointerup'; pull = null; rocket.classList.remove('held'); html.classList.remove('pulling'); rocket.setAttribute('data-cursor', 'Drag');
+  try { if (rocket.hasPointerCapture(id)) rocket.releasePointerCapture(id); } catch (err) {}
+  /* a press that never moved was not a pull: if a tick lies under the rocket there, it was a press on that tick */
+  if (pressed) { const a = document.elementsFromPoint(e.clientX, e.clientY).find(n => n.matches && n.matches('#rail li a')); if (a) a.click(); }
+}
+rocket.addEventListener('pointerdown', e => {
+  if (pull || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  e.preventDefault(); rocket.focus({ preventScroll: true });       // no text selection, no page drag; the keys work from here on
+  try { rocket.setPointerCapture(e.pointerId); } catch (err) {}   // so a pull that leaves the rail, or the window, is still followed and still ends
+  const top = railOl.getBoundingClientRect().top;
+  pull = { id: e.pointerId, top, grab: e.clientY - top - railR, r: railR, y0: e.clientY, moved: false };   // grab: where on the rocket it was caught, so it does not jump under the pointer
+  rocket.classList.add('held'); html.classList.add('pulling'); rocket.removeAttribute('data-cursor');
+});
+rocket.addEventListener('pointermove', e => { if (pull && e.pointerId === pull.id) pullTo(e.clientY); });
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => rocket.addEventListener(t, pullEnd));
+addEventListener('blur', () => pullEnd());
+rocket.addEventListener('dragstart', e => e.preventDefault());
+/* the ring and the name show for the keyboard only (a browser's own guess at that is thrown by a press handled here) */
+let byKeys = false; addEventListener('keydown', () => { byKeys = true; }, true); addEventListener('pointerdown', () => { byKeys = false; }, true);
+rocket.addEventListener('focus', () => rocket.classList.toggle('keys', byKeys)); rocket.addEventListener('blur', () => rocket.classList.remove('keys'));
+/* by keyboard: up and down a step, page up and page down a part, home and end the two ends */
+let keyY = 0, keyT = -1e9;
+rocket.addEventListener('keydown', e => {
+  const k = e.key; if (!['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(k) || e.altKey || e.ctrlKey || e.metaKey) return;
+  e.preventDefault(); rocket.classList.add('keys'); const now = performance.now(), from = now - keyT < 700 ? keyY : scrollY, i = seg(RL.ys, from + 2); let y;   // from: where the last key was heading, if it is still on its way
+  if (k === 'ArrowDown') y = from + vh * 0.5; else if (k === 'ArrowUp') y = from - vh * 0.5;
+  else if (k === 'PageDown') y = RL.ys[i + 1]; else if (k === 'PageUp') y = from > RL.ys[i] + 4 ? RL.ys[i] : RL.ys[Math.max(0, i - 1)];
+  else y = k === 'Home' ? 0 : RL.max;
+  keyY = clamp(Math.round(y), 0, RL.max); keyT = now;
+  if (k.startsWith('Arrow')) scrollTo({ top: keyY, behavior: STILL ? 'auto' : 'smooth' }); else goY(keyY);
+});
+
 /* a move to another part: glide when it is near, cut through black when it is far */
 const flash = $('#flash');
-function goTo(id) {
-  const s = byId[id]; if (!s) return; measure(); const y = landAt(s); const far = Math.abs(y - scrollY) > vh * 2.5;
+function goY(y) {
+  const far = Math.abs(y - scrollY) > vh * 2.5;
   if (!far || STILL) { scrollTo({ top: y, behavior: STILL ? 'auto' : 'smooth' }); return; }
   flash.style.background = '#101010'; flash.style.transition = 'opacity .22s'; flash.style.opacity = 1;
   setTimeout(() => { scrollTo({ top: y, behavior: 'instant' }); syS = y; setTimeout(() => { flash.style.transition = 'opacity .5s'; flash.style.opacity = 0; }, 90); }, 230);
 }
+function goTo(id) { const s = byId[id]; if (!s) return; measure(); goY(landAt(s)); }
 document.addEventListener('click', e => {
   const a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a) return; const id = a.getAttribute('href').slice(1); if (!byId[id]) return;
   e.preventDefault(); if (menu.open) menu.close(); goTo(id); history.replaceState(null, '', '#' + id);
+  const sec = byId[id].sec; sec.setAttribute('tabindex', '-1'); sec.focus({ preventScroll: true });   // the keyboard goes with the jump: the next Tab carries on from the part just reached
 });
 
 /* ───────── the scenes' own furniture ───────── */
@@ -119,11 +203,24 @@ function drive() {
     setOT(loHead, a, 22 * (1 - a) + hold); setOT(loClose, b, 22 * (1 - span(lo.x, -0.42, -0.02)) + hold); setOT(loCtl, c, 26 * (1 - c)); loBox.classList.toggle('land', L > 0.06); }
 }
 
-/* ───────── sound (made in the browser, off until asked for) ───────── */
-let sound = null; const soundBtn = $('#soundBtn');
+/* ───────── sound (made in the browser) ─────────
+   A browser plays nothing until the visitor has pressed or typed something, so the galaxy starts by itself, quietly, on
+   the first press or key. The speaker in the bar turns it off and on again, and the choice is kept for the next visit. */
+let sound = null, soundOn = true; const soundBtn = $('#soundBtn');
+try { soundOn = localStorage.getItem('fg-sound') !== 'off'; } catch (e) {}
+const showSound = () => { soundBtn.setAttribute('aria-pressed', String(soundOn)); soundBtn.setAttribute('aria-label', soundOn ? 'Sound, on' : 'Sound, off'); };
+showSound();
+const soundKit = import('./sound.js').then(m => { sound = m.createSound(); sound.act(curPart ? curPart.id : 'top'); return sound; }).catch(e => { console.error('sound', e); return null; });
+const FIRST = ['pointerdown', 'keydown', 'touchend'];             // what a browser accepts as the visitor asking (a wheel scroll is not one)
+function wake() {
+  if (sound && sound.running) { FIRST.forEach(t => removeEventListener(t, wake, true)); return; }   // it is playing: stop listening
+  if (!soundOn) return;
+  if (sound) sound.setOn(true); else soundKit.then(s => { if (s && soundOn) s.setOn(true); });
+}
+FIRST.forEach(t => addEventListener(t, wake, true));
 soundBtn.addEventListener('click', async () => {
-  if (!sound) { try { sound = (await import('./sound.js')).createSound(); } catch (e) { console.error('sound', e); return; } }
-  const on = !sound.on; sound.setOn(on); soundBtn.setAttribute('aria-pressed', String(on)); $('.sl', soundBtn).textContent = on ? 'Sound on' : 'Sound off'; if (on) sound.act(curPart ? curPart.id : 'top');
+  soundOn = !soundOn; showSound(); try { localStorage.setItem('fg-sound', soundOn ? 'on' : 'off'); } catch (e) {}
+  const s = sound || await soundKit; if (s) s.setOn(soundOn);
 });
 
 /* ───────── the loop ───────── */
@@ -140,12 +237,12 @@ function frame(now) {
   sections.forEach(s => { s.x = (syS - s.top) / vh; s.len = Math.max(0.001, (s.h - vh) / vh); s.pe = s.x / s.len; s.p = clamp(s.pe); s.on = syS + vh > s.top && syS < s.top + s.h; });
   /* chrome: which part, which colours */
   const mid = syS + vh * 0.5; let part = parts[0]; for (const s of parts) if (mid >= s.top) part = s;
-  if (part !== curPart) { curPart = part; $('#nvNo').textContent = part.no; $('#nvName').textContent = part.name; railItems.forEach((li, i) => li.classList.toggle('on', parts[i] === part)); $$('.nv-links a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + part.id)); if (sound) sound.act(part.id); }
+  if (part !== curPart) { curPart = part; $('#nvNo').textContent = part.no; $('#nvName').textContent = part.name; navLinks.forEach(a => { const on = a === navOf[part.id]; a.classList.toggle('on', on); if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); }); if (sound) sound.act(part.id); }
   const under = sections.find(s => syS + 32 >= s.top && syS + 32 < s.top + s.h) || sections[0];
   let theme = under.sec.classList.contains('night') ? 'night' : under.theme; if (under.id === 'focus' && GL) theme = under.p > 0.028 ? 'light' : 'dark'; if (!GL && theme === 'dark') theme = 'night';
+  { const end = sections[sections.length - 1]; if (syS + vh > end.top + end.h + 2) theme = 'night'; }   // past the last scene its stage slides up under the bar as the footer comes in: the bar goes solid
   if (theme !== navTheme) { navTheme = theme; body.dataset.nav = theme; }
-  { const i = parts.indexOf(part), nx = parts[i + 1]; const f = nx ? clamp((mid - part.top) / Math.max(1, nx.top - part.top)) : clamp((mid - part.top) / Math.max(1, part.h)); const a = railItems[i], b = railItems[i + 1] || a;
-    rocket.style.transform = `translateY(${(lerp(a.offsetTop, b.offsetTop, f) + a.offsetHeight / 2).toFixed(1)}px)`; }
+  railFrame(sy);
   if (GL) drive();
   if (journey) journey.frame(vh);
   if (world) {

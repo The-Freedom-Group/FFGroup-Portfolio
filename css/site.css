@@ -118,51 +118,89 @@ main{position:relative;z-index:1}
 body[data-nav="light"] #nav{color:#101010}
 body[data-nav="light"] #nav::before{background:#F4F1EB;border-bottom:1px solid #DAD5CB}
 body[data-nav="night"] #nav::before{background:#101010;border-bottom:1px solid rgba(244,241,235,.12)}
-body.launching #nav,body.launching #rail{transform:translateY(-110%)}
-body.launching #rail{transform:translateX(120%)}
+body.launching #nav{transform:translateY(-110%)}
+body.launching #rail{transform:translate(160%,-50%)}
 .nv-brand{display:flex;align-items:center;gap:11px;flex:none}
 .nv-brand img{width:30px;height:30px}
 .nv-word{font:400 12px/1 var(--logo);letter-spacing:.04em;white-space:nowrap}
 .nv-word i{font-style:normal;opacity:.6}
-.nv-now{font:500 10.5px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;display:flex;gap:10px;align-items:center;white-space:nowrap;min-width:0;overflow:hidden;opacity:.9;margin-left:6px;padding-left:20px;border-left:1px solid currentColor;border-color:color-mix(in srgb,currentColor 28%,transparent)}
-.nv-now b{font-weight:500;color:var(--pink)}
+/* where the reader is: the part's number and name. A long name takes a second line before it is ever cut short. */
+.nv-now{font:500 10.5px/1.3 var(--mono);letter-spacing:.2em;text-transform:uppercase;display:flex;gap:10px;align-items:center;flex:0 1 auto;min-width:0;opacity:.9;margin:0 clamp(8px,1vw,16px) 0 6px}
+.nv-now::before{content:"";width:1px;height:14px;background:currentColor;opacity:.28;margin-right:10px;flex:none}
+.nv-now b{font-weight:500;color:var(--pink);flex:none}
+.nv-now span{min-width:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;text-wrap:balance}
 body[data-nav="light"] .nv-now b{color:var(--pink-3)}
-.nv-links{display:none;margin-left:auto;gap:clamp(14px,1.7vw,28px)}
-.nv-links a{white-space:nowrap;font:500 10.5px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:12px 0;position:relative;opacity:.78;transition:opacity .2s}
-.nv-links a::after{content:"";position:absolute;left:0;right:0;bottom:6px;height:1px;background:var(--pink);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
+/* the sections, in the earlier portfolio's words and order; Liftoff, the last of them, is the pink button beside them */
+.nv-links{display:none;flex:none;margin-left:auto;gap:clamp(14px,1.6vw,30px)}
+.nv-links a{white-space:nowrap;font:500 10.5px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:14px 0;position:relative;opacity:.78;transition:opacity .2s}
+.nv-links a::after{content:"";position:absolute;left:0;right:.2em;bottom:8px;height:1px;background:var(--pink);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
 .nv-links a:hover,.nv-links a.on{opacity:1}
 .nv-links a:hover::after,.nv-links a.on::after{transform:none}
-.nv-tools{display:flex;align-items:center;gap:10px;margin-left:auto}
-.nv-links + .nv-tools{margin-left:auto}
-.nv-sound,.nv-menu,.nv-cta{font:500 10.5px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;height:38px;padding:0 15px;border-radius:999px;border:1px solid color-mix(in srgb,currentColor 34%,transparent);display:inline-flex;align-items:center;gap:9px;white-space:nowrap;transition:background .2s,color .2s,border-color .2s}
+.nv-tools{display:flex;align-items:center;gap:10px;margin-left:auto;flex:none}
+.nv-menu,.nv-cta{font:500 10.5px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;height:38px;padding:0 15px;border-radius:999px;border:1px solid color-mix(in srgb,currentColor 34%,transparent);display:inline-flex;align-items:center;gap:9px;white-space:nowrap;transition:background .2s,color .2s,border-color .2s}
 .nv-sound:hover,.nv-menu:hover{border-color:currentColor}
 .nv-cta{background:var(--pink);border-color:var(--pink);color:#101010}
 .nv-cta:hover{background:#F4F1EB;border-color:#F4F1EB}
 body[data-nav="light"] .nv-cta:hover{background:#101010;border-color:#101010;color:#F4F1EB}
 .nv-menu span{width:14px;height:7px;border-block:1.5px solid currentColor}
-.eq{display:inline-flex;align-items:flex-end;gap:2px;height:11px}
-.eq i{width:2px;height:3px;background:currentColor;border-radius:1px}
-.nv-sound[aria-pressed="true"] .eq i{animation:eq 1s ease-in-out infinite}
-.nv-sound[aria-pressed="true"] .eq i:nth-child(2){animation-delay:-.4s}
-.nv-sound[aria-pressed="true"] .eq i:nth-child(3){animation-delay:-.7s}
-@keyframes eq{0%,100%{height:3px}50%{height:11px}}
-html.no-gl .nv-sound{display:none}
-@media (min-width:1340px){.nv-links{display:flex}.nv-links + .nv-tools{margin-left:clamp(14px,1.7vw,28px)}}
-@media (max-width:760px){.nv-now,.nv-sound .sl,.nv-word{display:none}.nv-sound{padding:0 12px}.nv-menu b{display:none}.nv-menu{padding:0 12px}}
+/* sound: one small speaker, no words. Waves when it is on, a cross when it is off. */
+.nv-sound{width:38px;height:38px;border-radius:50%;border:1px solid color-mix(in srgb,currentColor 34%,transparent);display:inline-grid;place-items:center;flex:none;transition:border-color .2s,opacity .2s}
+.nv-sound svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.nv-sound .spk{fill:currentColor;stroke-width:1}
+.nv-sound[aria-pressed="true"] .mu,.nv-sound[aria-pressed="false"] .wv{display:none}
+.nv-sound[aria-pressed="false"] svg{opacity:.62}
+html.no-js .nv-sound{display:none}
+main > section:focus{outline:none}                               /* a jump hands the keyboard to the part it lands on, without a ring round the whole part */
+@media (min-width:1260px){.nv-links{display:flex}.nv-links + .nv-tools{margin-left:clamp(4px,1vw,14px)}}
+/* between a small laptop and a wide screen the links sit closer, so the bar never crowds; on the smallest of them the
+   index button keeps its mark and drops its word */
+@media (min-width:1260px) and (max-width:1639px){#nav{gap:16px}.nv-links{gap:clamp(13px,1.1vw,17px)}.nv-links + .nv-tools{margin-left:2px}.nv-links a{letter-spacing:.12em}.nv-links a::after{right:.12em}.nv-now{letter-spacing:.13em;gap:8px;margin-left:2px}.nv-now::before{margin-right:6px}.nv-tools{gap:8px}}
+@media (min-width:1260px) and (max-width:1439px){#nav{gap:14px}.nv-links{gap:13px}.nv-links a{font-size:10px;letter-spacing:.09em}.nv-links a::after{right:.09em}.nv-menu b{display:none}.nv-menu{width:38px;padding:0;justify-content:center}}
+@media (max-width:760px){.nv-now,.nv-word{display:none}.nv-menu b{display:none}.nv-menu{width:40px;padding:0;justify-content:center}.nv-menu,.nv-cta{height:40px}.nv-sound{width:40px;height:40px}.nv-tools{gap:8px}}
 @media (max-width:380px){.nv-cta{padding:0 12px;letter-spacing:.12em}}
 
-/* the progress rail down the right edge: a line, a tick for each part, and the rocket */
-#rail{position:fixed;right:max(14px,calc(var(--gut) * .32));top:50%;z-index:55;transform:translateY(-50%);display:none;color:#F4F1EB;transition:color .35s,transform .45s var(--ease),opacity .3s}
+/* the progress rail down the right edge: a line from the start to the ground, a tick where each part begins (a long part
+   gets a long stretch of line), and the rocket. The rocket is a handle: pull it up or down and the page follows. */
+#rail{position:fixed;right:max(14px,calc(var(--gut) * .32));top:calc(50% + var(--nav) * .3);z-index:55;transform:translateY(-50%);display:none;color:#F4F1EB;pointer-events:none;user-select:none;-webkit-user-select:none;transition:color .35s,transform .45s var(--ease),opacity .3s}
 body[data-nav="light"] #rail{color:#101010}
 #rail ol{position:relative;display:flex;flex-direction:column;gap:0}
-#rail ol::before{content:"";position:absolute;right:5px;top:9px;bottom:9px;width:1px;background:currentColor;opacity:.22}
-#rail li a{display:flex;align-items:center;justify-content:flex-end;gap:10px;height:clamp(20px,3.6vh,30px);font:500 9.5px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase}
-#rail li a span{opacity:0;transform:translateX(6px);transition:opacity .2s,transform .2s;white-space:nowrap;pointer-events:none}
-#rail li a i{width:11px;height:1px;background:currentColor;opacity:.45;transition:width .25s,opacity .25s,background .25s;flex:none}
-#rail li a:hover span,#rail li a:focus-visible span{opacity:1;transform:none}
-#rail li.on a i{width:11px;height:3px;background:var(--pink);opacity:1;border-radius:2px}
-#rail .rk{position:absolute;right:-1px;top:0;width:13px;height:26px;margin-top:-13px;color:var(--pink);pointer-events:none;will-change:transform}
-#rail .rk svg{width:13px;height:26px}
+#rail ol::before{content:"";position:absolute;right:5px;top:9px;bottom:9px;width:1px;background:currentColor;opacity:.3}
+/* The rail takes the pointer only where it is drawn. A tick's link is the tick and a little room round it; its name is
+   laid over the page beside it and takes no pointer, so nothing in the page under the rail is ever covered. */
+#rail li a{position:relative;display:flex;align-items:center;justify-content:flex-end;width:31px;padding:0 10px;margin-right:-10px;height:clamp(20px,3.6vh,30px);font:500 9.5px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;pointer-events:auto}
+#rail li a span{position:absolute;right:100%;top:50%;transform:translate(6px,-50%);color:#F4F1EB;background:#101010;border:1px solid rgba(244,241,235,.25);border-radius:999px;padding:7px 10px;opacity:0;transition:opacity .2s,transform .2s;white-space:nowrap;pointer-events:none}
+#rail li a i{width:11px;height:1px;background:currentColor;opacity:.62;transition:width .25s,opacity .25s,background .25s;flex:none}
+#rail li a:hover span,#rail li a:focus-visible span{opacity:1;transform:translate(0,-50%)}
+#rail li a:hover i{opacity:1}
+@media (pointer:coarse){#rail li a{width:44px;padding:0 16px 0 17px;margin-right:-16px}}   /* a finger gets more room round each tick; still clear of the page */
+#rail li.on a i{width:11px;height:3px;opacity:1;border-radius:2px}   /* the part the rocket is in: a heavier tick (the pink is the rocket's) */
+/* once the page has measured its parts, each tick sits where its part starts and the line ends at the ground */
+#rail.laid{top:var(--rt);transform:none}
+body.launching #rail.laid{transform:translateX(160%)}
+#rail.laid ol{display:block}
+#rail.laid ol::before{top:var(--r0);bottom:auto;height:calc(var(--rn) - var(--r0))}
+#rail.laid ol::after{content:"";position:absolute;right:-3px;top:calc(var(--rn) - .5px);width:17px;height:1px;background:currentColor;opacity:.6}
+#rail.laid li{position:absolute;right:0}
+#rail.laid li a{height:100%}
+#rail .rk{position:absolute;right:-16.5px;top:0;width:44px;height:48px;margin-top:-24px;display:grid;place-items:center;color:var(--pink);cursor:grab;pointer-events:auto;touch-action:none;will-change:transform;-webkit-tap-highlight-color:transparent}
+#rail .rk svg{width:17px;height:34px;overflow:visible;transition:transform .25s var(--ease)}
+#rail .rk:focus{outline:none}
+#rail .rk.keys{outline:2px solid var(--pink);outline-offset:2px;border-radius:12px}   /* the ring is for the keyboard only */
+#rail .rk:hover svg,#rail .rk.keys svg,#rail .rk.held svg{transform:scale(1.16)}
+/* which way it goes: a small mark above and below, brighter when it is reached for */
+#rail .rk::before,#rail .rk::after{content:"";position:absolute;left:50%;width:6px;height:6px;margin-left:-3px;border-left:1.5px solid currentColor;border-top:1.5px solid currentColor;opacity:.5;pointer-events:none;transition:opacity .2s,translate .25s var(--ease)}
+#rail .rk::before{top:-5px;rotate:45deg}
+#rail .rk::after{bottom:-5px;rotate:225deg}
+#rail .rk:hover::before,#rail .rk:hover::after,#rail .rk.keys::before,#rail .rk.keys::after,#rail .rk.held::before,#rail .rk.held::after{opacity:1}
+#rail .rk:hover::before,#rail .rk.held::before{translate:0 -2px}
+#rail .rk:hover::after,#rail .rk.held::after{translate:0 2px}
+#rail .rk.held{cursor:grabbing}
+/* while it is held (or has the keyboard): the number and name of the part it is over */
+#rail .rk-tag{position:absolute;right:100%;top:50%;transform:translate(8px,-50%);display:flex;gap:8px;align-items:center;white-space:nowrap;font:500 9.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:#F4F1EB;background:#101010;border:1px solid rgba(244,241,235,.25);border-radius:999px;padding:8px 11px;opacity:0;pointer-events:none;transition:opacity .2s,transform .25s var(--ease)}
+#rail .rk-tag b{font-weight:500;color:var(--pink)}
+#rail .rk.held .rk-tag,#rail .rk.keys .rk-tag{opacity:1;transform:translate(0,-50%)}
+html.pulling{user-select:none;-webkit-user-select:none}
+html.pulling:not(.has-cursor) *{cursor:grabbing !important}
 @media (min-width:1000px) and (min-height:560px){html.js #rail{display:block}}
 
 /* the index, full screen */
@@ -175,6 +213,7 @@ dialog::backdrop{background:rgba(10,10,10,.72);overflow:hidden;overscroll-behavi
 .mn-top{display:flex;justify-content:space-between;align-items:center;min-height:44px}
 .mn-list{margin:auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:0 clamp(24px,5vw,80px);padding-block:22px}
 .mn-list a{display:flex;align-items:baseline;gap:16px;padding:clamp(7px,1.5vh,14px) 0;border-bottom:1px solid var(--line);font:400 clamp(1.5rem,4.4vh,2.7rem)/1.05 var(--disp);text-transform:uppercase;letter-spacing:.01em;transition:color .2s,padding-left .3s var(--ease)}
+@media (min-width:1000px){.mn-list a{font-size:clamp(1.4rem,min(4.4vh,2.2vw),2.7rem)}}   /* three columns: every name on one line, so the rows stay level */
 .mn-list a i{font:500 10.5px/1 var(--mono);letter-spacing:.2em;color:var(--pink);font-style:normal;width:2.2em;flex:none}
 .mn-list a:hover,.mn-list a:focus-visible{color:var(--pink);padding-left:10px}
 .mn-foot{font:400 10.5px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--fg3)}
@@ -1115,14 +1154,6 @@ html.still .spider *{animation:none !important;transition:none !important}
   .crew-wide{display:none}
 }
 
-/* NOT the team's own, but the chart cannot work without it (move it to the rail's rules): the progress rail down the
-   right edge keeps its labels invisible until a tick is pointed at, yet each link was as wide as its hidden label (up
-   to 177px), so across the middle of the screen the rail took the pointer from whatever lay under it: here, the
-   right-hand names of the chart. Only a strip over each tick takes the pointer now (the rail itself, its list and its
-   rows let it through); keyboard use is as it was. */
-#rail{pointer-events:none}
-#rail li{position:relative}
-#rail li a::after{content:"";position:absolute;top:0;bottom:0;right:-10px;width:36px;pointer-events:auto}
 
 /* 09 the raise: the brief in one column down the middle of the climb: the heading, then the five cards two by two (the
    fifth across the bottom), then the mechanism */
@@ -1214,10 +1245,56 @@ html.no-gl .lo-ctl{margin-top:44px}
 html.no-gl .lo-count{display:none}
 @media (max-width:380px){#lo .lo-status li{letter-spacing:.06em;padding:8px}#lo .lo-go .btn{padding:17px 15px;font-size:11px;letter-spacing:.1em}#lo .lo-count{font-size:1.6rem}}   /* the narrowest phones: the console still on two lines */
 
-#foot{position:relative;z-index:1;background:var(--carbon);color:var(--fg2);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px 30px;flex-wrap:wrap;padding:22px var(--gut) calc(22px + env(safe-area-inset-bottom));font:400 10.5px/1.4 var(--mono);letter-spacing:.16em;text-transform:uppercase}
-.ft-links{display:flex;gap:22px;flex-wrap:wrap}
-.ft-links a:hover{color:var(--pink)}
-.ft-credit{flex-basis:100%;color:var(--fg3);letter-spacing:.1em;font-size:9.5px}
+/* the footer: the ground under the pad. Its first stretch lets the night behind it show and settles into the carbon
+   sheet, so it comes up as ground rather than as a new page. Then the group's mark, the parts of the story, the
+   group's other places, the company, and the small print. */
+#foot{--ft-rise:clamp(72px,13vh,150px);position:relative;z-index:1;background:linear-gradient(rgba(16,16,16,0),rgba(16,16,16,.55) calc(var(--ft-rise) * .5),var(--carbon) var(--ft-rise));color:var(--fg2);padding:calc(var(--ft-rise) + clamp(10px,2vw,30px)) var(--gut) calc(24px + env(safe-area-inset-bottom))}
+html.no-gl #foot{--ft-rise:0px;background:var(--carbon);border-top:1px solid var(--line);padding-top:clamp(44px,6vw,84px)}
+.ft-head{display:flex;align-items:center;justify-content:space-between;gap:20px 30px;flex-wrap:wrap;padding-bottom:clamp(24px,3vw,40px);border-bottom:1px solid var(--line2)}
+.ft-brand{display:flex;align-items:center;gap:clamp(12px,1.3vw,18px);min-height:52px;color:var(--fg)}
+.ft-brand img{width:clamp(40px,3.5vw,52px);height:auto}
+.ft-word{font:400 clamp(15px,1.85vw,26px)/1 var(--logo);letter-spacing:.04em;white-space:nowrap}
+.ft-word i{font-style:normal;opacity:.6}
+.ft-top{display:inline-flex;align-items:center;gap:12px;min-height:46px;padding:0 22px;border:1px solid var(--line2);border-radius:999px;font:500 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--fg);white-space:nowrap;transition:background .25s var(--ease),color .25s var(--ease),border-color .25s}
+.ft-top svg{width:12px;height:12px;fill:none;stroke:var(--pink);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s var(--ease),stroke .25s}
+@media (hover:hover){.ft-top:hover{background:var(--fg);border-color:var(--fg);color:var(--carbon)}.ft-top:hover svg{stroke:currentColor;transform:translateY(-3px)}}   /* hover looks are for a mouse: a finger leaves them stuck on */
+.ft-grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,2.1fr) minmax(0,2.9fr);gap:clamp(30px,4.4vw,72px);padding-block:clamp(28px,3.6vw,52px) clamp(34px,4.4vw,64px)}
+.ft-col .kick{margin-bottom:10px}
+#footList{columns:204px 3;column-gap:clamp(18px,2.2vw,36px)}   /* down each column in turn: three columns where they fit, two where they do not */
+#footList li{break-inside:avoid}
+#footList a,.ft-group a{display:flex;align-items:center;gap:12px;min-height:44px;padding:6px 0;border-bottom:1px solid var(--line);color:var(--fg);transition:color .2s,padding-left .3s var(--ease)}
+#footList a{font:400 1.04rem/1.1 var(--disp);text-transform:uppercase;letter-spacing:.02em}
+#footList a i{font:500 10px/1 var(--mono);letter-spacing:.18em;color:var(--pink);font-style:normal;width:2.3em;flex:none}
+.ft-group a{font:500 11px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase}
+@media (hover:hover){#footList a:hover,.ft-group a:hover{color:var(--pink);padding-left:6px}}
+.ft-co address{font-style:normal;display:grid;justify-items:start;gap:4px;font-size:.9rem;line-height:1.45;color:var(--fg2);text-wrap:balance}
+.ft-co address b{font:400 1.04rem/1.1 var(--disp);text-transform:uppercase;letter-spacing:.02em;color:var(--fg);display:flex;align-items:center;min-height:44px;padding:6px 0;border-bottom:1px solid var(--line);margin-bottom:8px;justify-self:stretch}
+.ft-co address a{display:inline-flex;align-items:center;min-height:42px;color:var(--fg);text-decoration:underline;text-decoration-color:var(--pink);text-decoration-thickness:1px;text-underline-offset:5px;transition:color .2s}
+@media (hover:hover){.ft-co address a:hover{color:var(--pink)}}
+.ft-base{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:baseline;gap:8px clamp(22px,3.4vw,56px);padding-top:20px;border-top:1px solid var(--line);font:400 10.5px/1.5 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--fg3)}
+.ft-c{color:var(--fg2)}
+.ft-note{font:400 .78rem/1.5 var(--sans);letter-spacing:0;text-transform:none;text-wrap:balance}
+.ft-credit{letter-spacing:.1em}
+@media (max-width:1100px){
+  .ft-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .ft-story{grid-column:1 / -1}
+  .ft-base{grid-template-columns:minmax(0,1fr) auto}
+  .ft-note{grid-column:1 / -1;grid-row:2}
+}
+@media (max-width:760px){
+  #footList{columns:2;column-gap:20px}
+  #footList a{font-size:1rem}
+  .ft-grid{grid-template-columns:minmax(0,1fr);gap:30px}
+  .ft-base{grid-template-columns:minmax(0,1fr);gap:8px}
+  .ft-note{grid-column:auto;grid-row:auto}
+  /* on a phone the footer is longer than the screen: the way back up goes at its end, where the reader is */
+  #foot{display:flex;flex-direction:column}
+  .ft-head{display:contents}
+  .ft-brand{order:1;padding-bottom:22px;border-bottom:1px solid var(--line2)}
+  .ft-grid{order:2}
+  .ft-top{order:3;justify-content:space-between;margin-bottom:26px}
+  .ft-base{order:4}
+}
 
 /* photos, full size */
 #lightbox{--bg:#0b0b0b;background:transparent;width:100vw;height:100dvh;margin:0}
@@ -1233,8 +1310,9 @@ html.no-gl .lo-count{display:none}
 .lb-nav svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .lb-nav.one{visibility:hidden}
 
-/* the pointer, on a mouse */
-#cursor{position:fixed;left:0;top:0;z-index:200;pointer-events:none;opacity:0;transition:opacity .3s}
+/* the pointer, on a mouse. It rides in the browser's top layer (a popover), above every dialog and its backdrop, so it
+   is never lost inside the index, a photo or a person; the rules here undo what a popover is given by default. */
+#cursor{position:fixed;inset:0 auto auto 0;z-index:200;width:0;height:0;margin:0;padding:0;border:0;background:none;color:inherit;overflow:visible;pointer-events:none;opacity:0;transition:opacity .3s}
 #cursor.on{opacity:1}
 #cursor .dot,#cursor .ring{position:absolute;left:0;top:0;border-radius:50%;will-change:transform}
 #cursor .dot{width:6px;height:6px;margin:-3px 0 0 -3px;background:var(--pink);transition:opacity .2s}
@@ -1244,7 +1322,11 @@ html.no-gl .lo-count{display:none}
 #cursor.down .ring{width:26px;height:26px;margin:-13px 0 0 -13px}
 #cursor .cl{position:absolute;left:0;top:0;font:500 9.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:#F4F1EB;background:#101010;border:1px solid rgba(244,241,235,.25);border-radius:999px;padding:6px 9px;white-space:nowrap;opacity:0;transition:opacity .2s}
 #cursor.lbl .cl{opacity:1}
-html.has-cursor,html.has-cursor a,html.has-cursor button,html.has-cursor summary,html.has-cursor label{cursor:none}
+html.has-cursor,html.has-cursor *,html.has-cursor *::before,html.has-cursor *::after{cursor:none !important}
+/* a browser that cannot lift the pointer above a dialog gives dialogs the system pointer back instead */
+html.has-cursor.no-lift dialog[open],html.has-cursor.no-lift dialog[open] *{cursor:auto !important}
+html.has-cursor.no-lift dialog[open] a,html.has-cursor.no-lift dialog[open] button,html.has-cursor.no-lift dialog[open] button *,html.has-cursor.no-lift dialog[open] summary,html.has-cursor.no-lift dialog[open] label{cursor:pointer !important}
+html.no-lift.modal-up #cursor{visibility:hidden}
 #flash{position:fixed;inset:0;z-index:150;background:#F4F1EB;opacity:0;pointer-events:none}
 
 /* ───────── small screens ───────── */
