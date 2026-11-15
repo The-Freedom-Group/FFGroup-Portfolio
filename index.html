@@ -92,23 +92,27 @@
 <section id="top" class="scene" data-world="orbit" data-theme="dark" data-no="00" data-name="Start">
   <div class="stage">
     <div class="hero" id="hero">
+      <!-- the group's mark, set to the artwork: the letters are type, the globe and its orbit are the world behind -->
       <div class="mark" id="mark" role="img" aria-label="The Freedom Group">
-        <span class="mk-the" aria-hidden="true">THE</span>
-        <span class="mk-main" aria-hidden="true">FREED<i class="mk-o" id="markO"></i>M</span>
-        <span class="mk-grp" aria-hidden="true">GROUP</span>
+        <svg class="mk-type" viewBox="0 0 1000 1010" aria-hidden="true">
+          <g><text id="mkThe">THE</text></g><g><text id="mkFreed">FREED</text></g><g><text id="mkM">M</text></g><g><text id="mkGroup">GROUP</text></g>
+        </svg>
+        <i class="mk-o" id="markO" aria-hidden="true"></i>
       </div>
       <img class="mark-flat" src="assets/brand/group-logo-white.png" width="480" height="485" alt="The Freedom Group">
-      <div class="hero-copy">
-        <p class="kick"><b>Interactive portfolio</b> Growth story</p>
-        <h1>From one rusty old fire extinguisher <em>to a group built beyond £100 million.</em></h1>
-        <p class="hero-sub">Freedom Global is being built into a £100 million ecommerce business, and the first value engine of a much wider group.</p>
+      <div class="hero-copy" id="heroCopy">
+        <h1><span>From one rusty old fire extinguisher</span> <em class="grad">to a group built beyond £100 million.</em></h1>
+        <p class="hero-sub">Freedom Global is being built into a £100 million ecommerce business, and the first major value creation engine within a much wider group.</p>
+        <p class="hero-cta"><span>Scroll to Explore</span></p>
+        <ul class="kpis" id="kpis">
+          <li style="--c:var(--o-mint)"><b data-count="1" data-prefix="£" data-suffix="m+">£1m+</b><span>Annual revenue already achieved</span>
+            <svg viewBox="0 0 120 30" aria-hidden="true"><path d="M4 25.4C24 23.2 40 20.4 60 17.1S96 9.4 116 6"/><circle cx="116" cy="6" r="3"/></svg><em>A proven foundation</em></li>
+          <li style="--c:var(--o-blue)"><b data-count="250000" data-suffix="+">250,000+</b><span>Orders processed nationwide</span>
+            <svg viewBox="0 0 120 30" aria-hidden="true"><path d="M4 25.4C24 25 42 23.6 60 21.2S98 12.6 116 6"/><circle cx="116" cy="6" r="3"/></svg><em>Demand proven at scale</em></li>
+          <li style="--c:var(--o-pink)"><b data-count="12">12</b><span>Owned and developing brands</span>
+            <svg viewBox="0 0 120 30" aria-hidden="true"><path d="M4 21C24 18.4 40 15.4 60 12.7S96 8 116 6"/><circle cx="116" cy="6" r="3"/></svg><em>Built for growth</em></li>
+        </ul>
       </div>
-      <ul class="kpis" id="kpis">
-        <li><b data-count="1" data-prefix="£" data-suffix="m+">£1m+</b><span>Annual revenue already achieved</span></li>
-        <li><b data-count="250000" data-suffix="+">250,000+</b><span>Orders processed nationwide</span></li>
-        <li><b data-count="12">12</b><span>Owned and developing brands</span></li>
-      </ul>
-      <p class="cue" aria-hidden="true"><i></i>Scroll to explore</p>
     </div>
   </div>
 </section>
@@ -117,75 +121,118 @@
 <section id="system" class="scene" data-world="orbit" data-theme="dark" data-no="01" data-name="The system">
   <div class="stage">
     <div class="sys" id="sys">
-      <header class="sh">
-        <p class="kick"><b>01</b> The Freedom system</p>
-        <h2>One group. One commercial engine. <em>Multiple paths to growth.</em></h2>
-        <p class="lede">Enterprise sits at the centre, owning the brands, trademarks and IP and licensing them to each operating company.</p>
-      </header>
-      <ul class="sys-stats">
-        <li><b>1</b><span>Holding company</span></li>
-        <li><b>1</b><span>Active operating company</span></li>
-        <li><b>2</b><span>Planned companies</span></li>
-        <li><b>4</b><span>Future ventures</span></li>
-      </ul>
-      <div class="sys-labels" id="sysLabels" aria-hidden="true"></div>
-      <ol class="sys-cards" id="sysCards">
-        <li class="card" data-co="enterprise" style="--c:#FF2D8D">
-          <p class="c-status">Holding company</p>
-          <h3>Freedom Group Enterprise Ltd</h3>
-          <p class="c-line">Owner of the group’s brands, intellectual property and long term strategic platform.</p>
-          <p class="c-chips"><span>Brands</span><span>IP</span><span>Strategy</span><span>Capital</span></p>
-        </li>
-        <li class="card" data-co="global" style="--c:#6fb6ff">
-          <p class="c-status live">Active · today’s investment focus</p>
-          <h3>Freedom Global Ltd</h3>
-          <p class="c-type">Consumer ecommerce · D2C</p>
-          <p class="c-line">The established commercial engine, scaling owned brands across marketplaces and specialist storefronts. Trading today as Freedom Fire &amp; Safety Ltd.</p>
-          <dl class="c-facts">
-            <div><dt>Commerce ecosystem</dt><dd>Amazon · eBay · Shopify · Temu · TikTok Shop · OnBuy · Specialist storefronts</dd></div>
-            <div><dt>Core brands</dt><dd>Firestorm™ · Voltz™ · Kunergy™ · T3™ · Crystal Cleaning Solutions™ · Emerging brands</dd></div>
-          </dl>
-          <a class="c-go" href="#focus">View full company profile</a>
-        </li>
-        <li class="card" data-co="facilities" style="--c:#2fe2a0">
-          <p class="c-status">Planned</p>
-          <h3>Freedom Facilities Ltd</h3>
-          <p class="c-type">Compliance · Servicing · Facilities</p>
-          <p class="c-line">Recurring revenue from fire safety servicing, installation, compliance and facilities support.</p>
-          <dl class="c-facts">
-            <div><dt>Core market</dt><dd>Commercial premises · Education · Warehousing · Construction · Hospitality · Public sector</dd></div>
-          </dl>
-        </li>
-        <li class="card" data-co="distribution" style="--c:#ff7a3d">
-          <p class="c-status">Planned</p>
-          <h3>Freedom Distribution Ltd</h3>
-          <p class="c-type">Trade distribution · B2B</p>
-          <p class="c-line">Wholesale supply of the group’s owned brands to national retailers, trade partners and distributors.</p>
-          <dl class="c-facts">
-            <div><dt>Core categories</dt><dd>Fire safety · Batteries · PPE · Cleaning · Automotive</dd></div>
-            <div><dt>Target channels</dt><dd>National retailers · Electrical wholesalers · Commercial distributors · Export partners</dd></div>
-          </dl>
-        </li>
-        <li class="card" data-co="future29" style="--c:#f2c94c">
-          <p class="c-status">Future · 2029</p>
-          <h3>Freedom Form Ltd <i>&amp;</i> Freedom Freight Ltd</h3>
-          <dl class="c-facts wide">
-            <div><dt>Form · Property · Development · Design</dt><dd>A future commercial property platform for the group’s premises, acquisitions and growth.</dd></div>
-            <div><dt>Freight · Imports · Logistics</dt><dd>A future logistics arm for imports, freight control and supply chain efficiency.</dd></div>
-          </dl>
-        </li>
-        <li class="card" data-co="future30" style="--c:#b48cff">
-          <p class="c-status">Future · 2030+</p>
-          <h3>Freedom Fly Ltd <i>&amp;</i> Freedom Fuel Ltd</h3>
-          <dl class="c-facts wide">
-            <div><dt>Fly · Drone tech · Aerial services</dt><dd>A future specialist business focused on surveying, inspection and aerial visual services.</dd></div>
-            <div><dt>Fuel · Forecourts · Energy · Retail</dt><dd>A long term ambition to develop or acquire petrol stations, forecourts and convenience-retail locations.</dd></div>
-          </dl>
-        </li>
-      </ol>
-      <div class="sys-foot">
-        <div class="sys-steps" id="sysSteps" role="group" aria-label="Companies in the group"></div>
-        <p class="fine">Illustrative long term direction, not part of the current investment case. <a href="https://thefreedomgroup.global/" target="_blank" rel="noopener">Fly the whole system ↗</a></p>
+      <div class="sys-board" id="sysBoard">
+        <header class="sh sys-head" id="sysHead">
+          <p class="kick"><b>01</b> The Freedom System</p>
+          <h2>One Group. One Commercial Engine. <em>Multiple Paths to Growth.</em></h2>
+          <p class="lede"><span class="for-wide">Freedom Group Enterprise sits at the centre, owning the group’s brands, trademarks and intellectual property, and licensing them to each specialist operating company.</span><span class="for-small">Freedom Group Enterprise sits at the centre, owning the brands, trademarks and IP, and licensing them to each specialist operating company.</span></p>
+          <p class="sys-focus"><b>Today’s investment focus</b>, Freedom Global Ltd (trading as Freedom Fire &amp; Safety Ltd)</p>
+        </header>
+        <ul class="sys-stats" id="sysStats">
+          <li style="--c:var(--o-pink)"><b>1</b><span>Holding company</span><i>Owns the brands, IP and strategy</i></li>
+          <li style="--c:var(--o-blue)"><b>1</b><span>Active operating company</span><i>The commercial engine trading today</i></li>
+          <li style="--c:var(--o-ember)"><b>2</b><span>Planned companies</span><i>Next specialist businesses in development</i></li>
+          <li style="--c:var(--o-mint)"><b>4</b><span>Future ventures</span><i>Long term wider group vision</i></li>
+        </ul>
+
+        <!-- the map: each company is a place for its world (the world itself is drawn behind) and what is written beside it -->
+        <div class="co" data-co="enterprise" style="--c:var(--o-pink)">
+          <button class="slot" type="button" data-pick="enterprise" data-cursor="Select" aria-label="Freedom Group Enterprise Ltd"></button>
+          <button class="lb" type="button" data-pick="enterprise" tabindex="-1" aria-hidden="true"><b>Freedom Group Enterprise Ltd</b></button>
+          <div class="fam fam-ent">
+            <div class="card">
+              <h3>Freedom Group Enterprise Ltd</h3>
+              <p class="c-line">Owner of the group’s brands, intellectual property and long term strategic platform.</p>
+              <p class="c-chips"><span>Brands</span><span>IP</span><span>Strategy</span><span>Capital</span></p>
+            </div>
+          </div>
+        </div>
+        <div class="co" data-co="global" style="--c:var(--o-blue)">
+          <button class="slot" type="button" data-pick="global" data-cursor="Select" aria-label="Freedom Global Ltd"></button>
+          <button class="lb" type="button" data-pick="global" tabindex="-1" aria-hidden="true"><b>Freedom Global Ltd</b><em class="tag live">Active</em></button>
+          <div class="fam">
+            <div class="card">
+              <h3><img class="mini" src="assets/minis/global.webp" srcset="assets/minis/global.webp 1x, assets/minis/global@2x.webp 2x" width="22" height="22" alt="">Freedom Global Ltd <em class="tag live">Active</em></h3>
+              <p class="c-ta">(Currently trading as Freedom Fire &amp; Safety Ltd)</p>
+              <p class="c-type">Consumer ecommerce · D2C</p>
+              <p class="c-line">The group’s established commercial engine, scaling owned brands across marketplaces, ecommerce channels and specialist online storefronts.</p>
+            </div>
+            <dl class="sub"><dt>Commerce ecosystem</dt><dd>Amazon · eBay · Shopify · Temu · TikTok Shop · OnBuy · Specialist storefronts</dd></dl>
+            <dl class="sub"><dt>Core brands</dt><dd>Firestorm™ · Voltz™ · Kunergy™ · T3™ · Crystal Cleaning Solutions™ · Emerging brands</dd></dl>
+            <a class="c-go" href="#focus">View full company profile</a>
+          </div>
+        </div>
+        <div class="co" data-co="facilities" style="--c:var(--o-mint)">
+          <button class="slot" type="button" data-pick="facilities" data-cursor="Select" aria-label="Freedom Facilities Ltd"></button>
+          <button class="lb" type="button" data-pick="facilities" tabindex="-1" aria-hidden="true"><b>Freedom Facilities Ltd</b></button>
+          <div class="fam">
+            <div class="card">
+              <h3><img class="mini" src="assets/minis/facilities.webp" srcset="assets/minis/facilities.webp 1x, assets/minis/facilities@2x.webp 2x" width="22" height="22" alt="">Freedom Facilities Ltd</h3>
+              <p class="c-type">Compliance · Servicing · Facilities</p>
+              <p class="c-line">A recurring revenue operation delivering fire safety servicing, installation, compliance and facilities support.</p>
+            </div>
+            <dl class="sub"><dt>Core market</dt><dd>Commercial premises · Education · Warehousing · Construction · Hospitality · Public sector</dd></dl>
+          </div>
+        </div>
+        <div class="co" data-co="distribution" style="--c:var(--o-ember)">
+          <button class="slot" type="button" data-pick="distribution" data-cursor="Select" aria-label="Freedom Distribution Ltd"></button>
+          <button class="lb" type="button" data-pick="distribution" tabindex="-1" aria-hidden="true"><b>Freedom Distribution Ltd</b></button>
+          <div class="fam">
+            <div class="card">
+              <h3><img class="mini" src="assets/minis/distribution.webp" srcset="assets/minis/distribution.webp 1x, assets/minis/distribution@2x.webp 2x" width="22" height="22" alt="">Freedom Distribution Ltd</h3>
+              <p class="c-type">Trade distribution · B2B</p>
+              <p class="c-line">A wholesale operation supplying the group’s owned brands to national retailers, trade partners and commercial distributors.</p>
+            </div>
+            <dl class="sub two"><div><dt>Core categories</dt><dd>Fire safety · Batteries · PPE · Cleaning · Automotive</dd></div><div><dt>Target channels</dt><dd>National retailers · Electrical wholesalers · Commercial distributors · Export partners</dd></div></dl>
+          </div>
+        </div>
+        <div class="co" data-co="future29" style="--c:var(--o-gold)">
+          <button class="slot pair" type="button" data-pick="future29" data-cursor="Select" aria-label="Freedom Form Ltd and Freedom Freight Ltd"></button>
+          <button class="lb" type="button" data-pick="future29" tabindex="-1" aria-hidden="true"><b>Freedom Form Ltd</b><b>Freedom Freight Ltd</b><em class="tag">Future · 2029</em></button>
+          <div class="fam">
+            <div class="card two">
+              <div class="row">
+                <h3><img class="mini" src="assets/minis/form.webp" srcset="assets/minis/form.webp 1x, assets/minis/form@2x.webp 2x" width="22" height="22" alt="">Freedom Form Ltd</h3>
+                <p class="c-when"><em class="tag">Future · 2029</em></p>
+                <p class="c-type">Property · Development · Design</p>
+                <p class="c-line">A future commercial property platform for the group’s premises, acquisitions and growth.</p>
+              </div>
+              <div class="row">
+                <h3><img class="mini" src="assets/minis/freight.webp" srcset="assets/minis/freight.webp 1x, assets/minis/freight@2x.webp 2x" width="22" height="22" alt="">Freedom Freight Ltd</h3>
+                <p class="c-when"><em class="tag">Future · 2029</em></p>
+                <p class="c-type">Freight · Imports · Logistics</p>
+                <p class="c-line">A future logistics arm for imports, freight control and supply chain efficiency.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="co" data-co="future30" style="--c:var(--o-violet)">
+          <button class="slot pair" type="button" data-pick="future30" data-cursor="Select" aria-label="Freedom Fly Ltd and Freedom Fuel Ltd"></button>
+          <button class="lb" type="button" data-pick="future30" tabindex="-1" aria-hidden="true"><b>Freedom Fly Ltd</b><b>Freedom Fuel Ltd</b><em class="tag">Future · 2030+</em></button>
+          <div class="fam">
+            <div class="card two">
+              <div class="row">
+                <h3><img class="mini" src="assets/minis/fly.webp" srcset="assets/minis/fly.webp 1x, assets/minis/fly@2x.webp 2x" width="22" height="22" alt="">Freedom Fly Ltd</h3>
+                <p class="c-when"><em class="tag">Future · 2030+</em></p>
+                <p class="c-type">Drone Tech · Aerial Services</p>
+                <p class="c-line">A future specialist business focused on surveying, inspection and aerial visual services.</p>
+              </div>
+              <div class="row">
+                <h3><img class="mini" src="assets/minis/fuel.webp" srcset="assets/minis/fuel.webp 1x, assets/minis/fuel@2x.webp 2x" width="22" height="22" alt="">Freedom Fuel Ltd</h3>
+                <p class="c-when"><em class="tag">Future · 2036+</em></p>
+                <p class="c-type">Forecourts · Energy · Retail</p>
+                <p class="c-line">A long term ambition to develop or acquire petrol stations, forecourts and convenience-retail locations.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sys-years" id="sysYears" aria-hidden="true"></div>
+        <p class="sys-hint" id="sysHint">Tap the planets for information</p>
+        <div class="sys-foot" id="sysFoot">
+          <div class="sys-steps" id="sysSteps" role="group" aria-label="Companies in the group"></div>
+          <p class="fine">Illustrative long term direction, not part of the current investment case. <a href="https://thefreedomgroup.global/" target="_blank" rel="noopener">Fly the whole system ↗</a></p>
+        </div>
       </div>
     </div>
   </div>

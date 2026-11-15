@@ -5,6 +5,7 @@ import { $, $$, el, svg, clamp, lerp, span, smooth, reveals, counters, lightDism
 import { initJourney } from './journey.js';
 import { initCharts } from './charts.js';
 import { initCrew } from './crew.js';
+import { initSystem } from './sysmap.js';
 
 const html = document.documentElement, body = document.body;
 let GL = html.classList.contains('gl');
@@ -49,7 +50,7 @@ rail.append(railOl, rocket);
 
 /* where a move to a part lands: its top, or, where the part says so (data-land), that far through its pinned scene, so a
    link to the investment focus arrives on the screen itself and not in the cloud before it */
-const landAt = s => Math.round(s.top + (+s.sec.dataset.land || 0) * Math.max(0, s.h - vh));
+const landAt = s => Math.round(s.top + (+s.sec.dataset.land || 0) * Math.max(0, s.h - vh) + landIn(s));   /* the system says for itself where it lands: on the finished map */
 /* Two matching lists: how far down the page each part starts (the last entry is the end of the page), and how far down
    the rail its tick sits (the last entry is the ground). Between two ticks the rail and the page move in step, so each
    is the exact inverse of the other: the rocket on a tick is the page at that part's start. Every stretch of rail has
@@ -141,21 +142,10 @@ document.addEventListener('click', e => {
 });
 
 /* ───────── the scenes' own furniture ───────── */
-/* 01 the system: six stops */
-const SYS = [
-  { co: 'enterprise', label: 'Enterprise', c: '#FF2D8D', worlds: ['enterprise'] }, { co: 'global', label: 'Global', c: '#6fb6ff', worlds: ['global'] },
-  { co: 'facilities', label: 'Facilities', c: '#2fe2a0', worlds: ['facilities'] }, { co: 'distribution', label: 'Distribution', c: '#ff7a3d', worlds: ['distribution'] },
-  { co: 'future29', label: 'Form & Freight', c: '#f2c94c', worlds: ['form', 'freight'] }, { co: 'future30', label: 'Fly & Fuel', c: '#b48cff', worlds: ['fly', 'fuel'] }
-];
-const SYS_A = 0.07, SYS_B = 0.84;                                // the stretch of the system scene the six stops share
-const sysEl = $('#sys'), sysCards = $$('#sysCards .card'), sysSteps = $('#sysSteps'); let sysStep = -1;
-const sysBtns = SYS.map((s, i) => { const b = el('button', { type: 'button', 'aria-pressed': 'false', style: '--c:' + s.c, text: s.label, onclick: () => stepTo(i) }); sysSteps.append(b); return b; });
-function stepTo(i) { const s = byId.system; measure(); const p = SYS_A + (i + 0.5) / SYS.length * (SYS_B - SYS_A); scrollTo({ top: s.top + p * (s.h - vh), behavior: STILL ? 'auto' : 'smooth' }); }
-function setSysStep(i) { if (i === sysStep) return; sysStep = i; sysCards.forEach((c, k) => c.classList.toggle('on', k === i)); sysBtns.forEach((b, k) => b.setAttribute('aria-pressed', String(k === i))); sysEl.classList.toggle('deep', i > 0); labels.forEach(l => l.n.classList.toggle('on', i >= 0 && SYS[i].worlds.includes(l.id))); if (i >= 0 && sound) sound.step(i); }
-/* the names that ride beside the worlds */
-const LABELS = [['enterprise', 'Enterprise', 'Holding', '#FF2D8D', 0], ['global', 'Global', 'Active', '#6fb6ff', 1], ['facilities', 'Facilities', 'Planned', '#2fe2a0', 2], ['distribution', 'Distribution', 'Planned', '#ff7a3d', 3],
-  ['form', 'Form', '2029', '#f2c94c', 4], ['freight', 'Freight', '2029', '#e9b86a', 4], ['fly', 'Fly', '2030+', '#b48cff', 5], ['fuel', 'Fuel', '2030+', '#7d8cff', 5]];
-const labels = LABELS.map(([id, name, tag, c, step]) => { const n = el('button.lb', { type: 'button', tabindex: -1, style: '--c:' + c, onclick: () => stepTo(step) }, name, el('em', { text: tag })); $('#sysLabels').append(n); return { id, n, step }; });
+/* 00 and 01, the opening and the system: their timeline, their places and what is written on them are in sysmap.js */
+const sys = GL ? safe('system', () => initSystem({ byId, onStep: i => { if (sound) sound.step(i); } })) : null;
+/* a jump to the system lands on the finished map, not on its first pixel */
+function landIn(s) { return s.id === 'system' && sys && GL ? sys.land() * Math.max(0, s.h - vh) : 0; }
 
 /* 05 the map: nine territories, nearest Bury first. Each is a card joined to its pin on the globe by a fine line; the same
    list is what a keyboard walks, and where there is no room beside the globe it is stepped through one card at a time */
@@ -174,19 +164,12 @@ const mpStep = $('#mpStep'), mpCount = el('b', { text: '1' });
   mpList.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; if (mpDeck.matches && Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.4) mapTo(Math.max(0, mpPin) + (dx < 0 ? 1 : -1)); }, { passive: true }); }
 function setPin(i) { if (i === mpPin) return; mpPin = i; [mpItems, mpPins, mpLines].forEach(set => set.forEach((n, k) => n.classList.toggle('on', k === i))); if (i >= 0) { mpCount.textContent = i + 1; if (sound) sound.tick(); } }
 
-const heroCopy = $('.hero-copy'), kpis = $('#kpis'), mark = $('#mark'), cue = $('.cue'), markO = $('#markO');
 const focusBox = $('#focusBox'), mp = $('#mp'), rs = $('#rs'), rsHead = $('#rs .sh'), rsList = $('#rsCards'), rsCards = $$('#rsCards li'), rsMech = $('#rsMech'), loBox = $('#lo'), loHead = $('#loHead'), loClose = $('#loClose'), loCtl = $('#loCtl');
 let rsAt = -1;
 const setOT = (n, o, y = 0, x = 0) => { n.style.opacity = o.toFixed(3); n.style.transform = (x || y) ? `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)` : 'none'; n.style.pointerEvents = o < 0.4 ? 'none' : ''; n.style.visibility = o < 0.004 ? 'hidden' : 'visible'; };
 
 function drive() {
-  const T = byId.top.p, S = byId.system.p, F = byId.focus.p, M = byId.map.p, R = byId.raise.p, L = byId.liftoff.p;
-  /* 00: the words leave, the mark opens */
-  let k = span(T, 0.16, 0.5); setOT(heroCopy, 1 - k, -50 * k); setOT(kpis, 1 - span(T, 0.1, 0.4), 30 * span(T, 0.1, 0.4)); cue.style.opacity = (1 - span(T, 0.02, 0.12)).toFixed(3);
-  k = span(T, 0.16, 0.4); mark.style.opacity = (1 - k).toFixed(3); mark.style.visibility = k > 0.995 ? 'hidden' : 'visible';      /* the letters go before the globe leaves its place among them */
-  /* 01: the system comes up, six stops, then the dive */
-  const sysIn = byId.system.on ? span(byId.system.pe, -0.02, 0.035) * (1 - span(S, 0.875, 0.93)) : 0; setOT(sysEl, sysIn, 0); sysEl.style.visibility = sysIn < 0.004 ? 'hidden' : 'visible';
-  setSysStep(S <= 0 || S > 0.9 ? (S > 0.9 ? -1 : 0) : clamp(Math.floor((S - SYS_A) / (SYS_B - SYS_A) * SYS.length), 0, SYS.length - 1));
+  const F = byId.focus.p, M = byId.map.p, R = byId.raise.p, L = byId.liftoff.p; let k;
   /* the way down: cloud clears to Freedom Global's light sheet (w-clouds.js keeps the same times), the words arrive, the screen holds, then it rides up into the next cloud */
   { const m = drive.fo || (drive.fo = {}), put = (n, v) => { if (m[n] !== v) byId.focus.sec.style.setProperty('--' + n, m[n] = v); };
     k = span(F, 0.255, 0.345); const up = smooth((F - 0.6) / 0.16), o = k * (1 - span(F, 0.665, 0.755));
@@ -232,7 +215,7 @@ soundBtn.addEventListener('click', async () => {
 });
 
 /* ───────── the loop ───────── */
-let world = null, syS = scrollY, last = performance.now(), curPart = null, navTheme = '', lastMode, markW = 0; const slot = { x: 0, y: 0, r: 0 }, markMain = $('.mk-main'), veilPaper = $('#veilPaper');
+let world = null, syS = scrollY, last = performance.now(), curPart = null, navTheme = '', lastMode; const veilPaper = $('#veilPaper');
 function pickWorld(mid) {
   /* the world behind whatever fills the middle of the screen; behind paper, whichever world is still in view at an edge */
   let at = sections.find(s => mid >= s.top && mid < s.top + s.h) || sections[sections.length - 1];
@@ -255,22 +238,14 @@ function frame(now) {
   if (journey) journey.frame(vh);
   if (world) {
     const w = pickWorld(mid); const mode = w ? w.world : null; if (mode !== lastMode) { lastMode = mode; world.setMode(mode); }
-    if (byId.top.p < 0.14 || !slot.r) { const o = markO.getBoundingClientRect(); slot.x = o.left + o.width / 2; slot.y = o.top + o.height / 2; slot.r = o.width / 2; markW = markMain.getBoundingClientRect().width; }
-    if (byId.system.on || byId.top.on) sysRoom(); if (byId.map.on) mapRoom(); if (byId.liftoff.on) padRoom();
-    world.update({ top: byId.top, system: byId.system, focus: byId.focus, map: byId.map, raise: byId.raise, liftoff: byId.liftoff, sysStep, sysWorlds: sysStep >= 0 ? SYS[sysStep].worlds : [], pin: mpPin, slot, markW, room, globeRoom, pad: padRooms, skyTurn: syS / Math.max(1, vh) * 0.04 }, dt, now / 1000);
+    if (byId.map.on) mapRoom(); if (byId.liftoff.on) padRoom();
+    world.update({ top: byId.top, system: byId.system, focus: byId.focus, map: byId.map, raise: byId.raise, liftoff: byId.liftoff, sys: sys.frame(), pin: mpPin, globeRoom, pad: padRooms, skyTurn: syS / Math.max(1, vh) * 0.04 }, dt, now / 1000);
     veilPaper.style.setProperty('--v', world.veil.toFixed(3));   /* how far the paper has risen over the last of the cloud */
-    placeTags();
+    sys.after(world.out); placeTags();
   }
   requestAnimationFrame(frame);
 }
-/* the part of the screen the system may fill: beside the words on a wide screen, between the words and the card on a phone */
-const room = { x0: 0, y0: 0, x1: 1, y1: 1 }, sysHead = $('.sys .sh'), sysStats = $('.sys-stats'), sysStage = $('#system .stage'), mapStage = $('#map .stage');
-function sysRoom() {   /* measured inside the stage, as if it were already pinned, so the system never rides in from off screen */
-  const o = sysStage.getBoundingClientRect().top;
-  if (vw < 900) { const h = sysHead.getBoundingClientRect(), st = sysStats.getBoundingClientRect(), c = sysCards[Math.max(0, sysStep)].getBoundingClientRect(), top = Math.max(h.bottom, sysEl.classList.contains('deep') ? 0 : st.bottom) - o;
-    room.x0 = 4; room.x1 = vw - 4; room.y0 = top + 44; room.y1 = Math.max(top + 170, c.top - o - 6); }
-  else { const h = sysHead.getBoundingClientRect(); room.x0 = Math.min(vw * 0.44, h.left + 480); room.x1 = vw - 58; room.y0 = h.top - o - 20; room.y1 = h.top - o + vh - 150; }
-}
+const mapStage = $('#map .stage');
 /* and at the map: where the globe stands on the stage (under the words, as large as the room allows) and where each card
    goes: Europe's five down the left of it and Asia's four down the right, or all nine in one place below it */
 const globeRoom = { cx: 0, cy: 0, r: 100, cols: true, a: MAP_A, b: MAP_B }, mpHead = $('.xm .sh'), mpSlots = mpItems.map(() => ({ x: 0, y: 0, w: 0, h: 0 })); let mpKey = '';
@@ -290,12 +265,8 @@ function mapRoom() {
 /* and where the rocket may stand on a phone: under the closing words while it lands, then between the heading and the console */
 const padRooms = { a0: 0, a1: 1, b0: 0, b1: 1, sky: 0, skyTop: 0 };
 function padRoom() { padRooms.a0 = loClose.offsetTop + loClose.offsetHeight + 14; padRooms.a1 = vh - 20; padRooms.b0 = loHead.offsetTop + loHead.offsetHeight + 12; padRooms.b1 = loCtl.offsetTop - 12; }
-/* the world says where its worlds and pins are on screen; the names follow */
-function placeTags() {
-  const out = world.out; if (!out) return;
-  labels.forEach(l => { const o = out.labels[l.id]; if (!o || o.a < 0.02) { l.n.style.opacity = 0; l.n.style.visibility = 'hidden'; return; } l.n.style.visibility = 'visible'; l.n.style.opacity = o.a.toFixed(2); l.n.style.transform = `translate3d(${o.x.toFixed(1)}px,${o.y.toFixed(1)}px,0) translate(-50%,-100%)`; });
-  placeMap();
-}
+/* the map says where its globe and pins are on screen; its cards, pins and lines follow */
+function placeTags() { placeMap(); }
 /* the map's furniture follows its globe: the ink of the words (dark on the white sheet, light once its night has fallen),
    the bar across the top with it, and each territory's pin, card and the line between them while the globe shows it */
 const MP_INK = [['--fg', [16, 16, 16], [244, 241, 235]], ['--fg2', [74, 74, 70], [180, 177, 170]], ['--fg3', [110, 108, 102], [138, 135, 129]], ['--hot-t', [198, 15, 110], [255, 45, 141]]]; let mpInk = -1;
