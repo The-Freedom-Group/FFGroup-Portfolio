@@ -55,6 +55,8 @@ export function createWorld({ canvas, onProgress }) {
       clouds.update(fam === 'space' ? 'down' : shown === 'climb' ? 'up' : null, fam === 'space' ? s.focus.pe : s.raise.pe, time, W / H);
       post.render(orbit.scene, orbit.camera, time, clouds.st.on ? r => clouds.draw(r) : null);
     }
+    /* the way down comes out into even daylight, so the lens stops darkening the corners there; and it is told how far the dive has got */
+    post.uniforms.vignette.value = 0.5 * (1 - (clouds.st.downAt === time ? clouds.st.flat : 0)); clouds.st.dive = orbit.out.dive;
     /* keep the frame rate: draw fewer pixels when frames run long, more again when they are comfortably short */
     acc += dt; if (++frames >= 45) { const avg = acc / frames; frames = 0; acc = 0;
       if (avg > 0.024 && scale > 0.62) { scale = Math.max(0.6, scale - 0.14); calm = 0; late++; resize(); if (late === 3) remember('low', 'frames ran long'); }

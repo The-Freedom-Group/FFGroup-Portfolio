@@ -272,33 +272,156 @@ html.no-gl .sys-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(
 html.no-gl .sys-steps,html.no-gl .sys-labels{display:none}
 html.no-gl .sys-foot{margin-top:22px}
 
-/* the way down */
-.focus{position:absolute;left:50%;top:50%;width:min(42.5rem,calc(100vw - 2 * var(--gut)));transform:translate(-50%,-50%);background:var(--carbon);border:1px solid var(--line);border-radius:8px;padding:clamp(22px,3.4vw,44px);will-change:transform,opacity}
-.focus h2{font:400 clamp(1.9rem,3.6vw,3.1rem)/.96 var(--disp);text-transform:uppercase;margin-top:.5em}
-.focus h2 em{display:block;font-family:var(--serif);font-style:italic;text-transform:none;font-size:.64em;line-height:1.05;color:var(--pink);margin-top:.16em}
-.focus .lede{font-size:.98rem;color:var(--fg2);margin-top:1em;line-height:1.5}
-.focus .lede b{color:var(--fg);font-weight:600}
-.fcard{margin-top:22px;border:1px solid var(--line);border-radius:6px}
-.fc-head{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line)}
-.fc-mark{width:42px;height:42px;border-radius:50%;background:var(--pink);color:#101010;display:grid;place-items:center;font:400 1.05rem/1 var(--disp);letter-spacing:.04em;flex:none}
-.fc-id{flex:1;min-width:0}
-.fc-id b{display:block;font:400 1.15rem/1.1 var(--disp);text-transform:uppercase;letter-spacing:.02em}
-.fc-id span{display:block;font:400 9.5px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--fg2);margin-top:5px}
-.fc-live{font:500 9.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;display:flex;align-items:center;gap:7px;white-space:nowrap}
-.fc-live i{width:7px;height:7px;border-radius:50%;background:#5fe0a0;animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{50%{opacity:.35}}
-.fc-facts{display:grid;grid-template-columns:1fr 1fr}
-.fc-facts > div{padding:13px 16px}
-.fc-facts > div + div{border-left:1px solid var(--line)}
-.fc-facts dt{font:500 9.5px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--fg3)}
-.fc-facts dd{font-size:.92rem;margin-top:4px}
-.fc-facts .amb{grid-column:1 / -1;border-left:0;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.fc-facts .amb dd{display:flex;align-items:baseline;gap:14px;margin:0;flex-wrap:wrap}
-.fc-facts .amb dd b{font:400 2.3rem/1 var(--disp);color:var(--pink);letter-spacing:.02em}
-.fc-facts .amb dd span{font-size:.82rem;color:var(--fg2)}
-.focus .btn{margin-top:22px}
-html.no-gl .focus{position:relative;left:auto;top:auto;transform:none;margin:60px auto}
-html.no-gl #focus{padding:1px var(--gut)}
+/* the way down: Freedom Global's own screen. It keeps the colours and faces of the earlier portfolio (cool white and
+   navy, the pink to violet to sky ramp, Orbitron for the mark and the figure), which is how this company has always
+   been shown. The earlier page's own text face never loaded, so what everyone saw there was the system's: Segoe UI on a
+   Windows PC, heavy and tight in the heading. That is the face asked for first here; other devices get --old.
+   The small capitals carry the same hues a shade deeper (--fo-ramp-ink and the two label blues), so they pass for
+   contrast at their size; the heading keeps the ramp exactly.
+   With the world on, the stage is pinned: cloud clears to the light sheet, the words arrive, the screen holds, then it
+   rides up into the next cloud (main.js drive() sets --sheet, --orbk, --zoom, --rise, --wash and the box's own place). */
+#focus{--fo-ink:#111626;--fo-sheet:#EEF1F8;--fo-ramp:linear-gradient(90deg,#ff4fb0,#7c5cff,#52c8ff);--fo-ramp-ink:linear-gradient(90deg,#e0258f,#6f4cf5,#1a80c8);--fo-face:"Segoe UI",var(--old);--fo-orb:min(31.25rem,52vw,60vh);color:var(--fo-ink)}
+html.gl #focus{height:420vh;margin-bottom:-45vh}                  /* the journey's paper is drawn up under the foot of the scene, where the veil is already its colour, so its heading follows the cloud closely */
+/* the paper that takes over from the last cloud: it rises from the foot of the screen with a soft top edge (--v, 0 to 1) */
+#focus .veil-paper{opacity:1;-webkit-mask-image:linear-gradient(to top,#000 calc(var(--v,0) * 130% - 30%),transparent calc(var(--v,0) * 130%));mask-image:linear-gradient(to top,#000 calc(var(--v,0) * 130% - 30%),transparent calc(var(--v,0) * 130%))}
+.fo-sheet{position:absolute;inset:0;background:var(--fo-sheet);pointer-events:none;overflow:hidden}
+html.gl .fo-sheet{opacity:var(--sheet,0)}
+/* the planet the dive ended in, behind the words: its glow outside the limb, and a pale wash over its face that comes
+   with the words, so the type reads */
+.fo-orb{position:absolute;left:50%;top:42%;width:calc(var(--fo-orb) * 1.7);aspect-ratio:1;margin:calc(var(--fo-orb) * -.85) 0 0 calc(var(--fo-orb) * -.85);border-radius:50%;opacity:var(--orbk,1);transform:translate3d(0,var(--rise,0px),0) scale(var(--zoom,1));will-change:transform,opacity;
+  background:url(../assets/focus-global.webp) center / 58.8235% no-repeat,radial-gradient(circle closest-side,rgba(56,169,255,.42) 0 57%,rgba(56,169,255,.2) 66%,rgba(56,169,255,.08) 80%,rgba(56,169,255,0) 100%)}
+.fo-orb::after{content:"";position:absolute;inset:20.5882%;border-radius:50%;background:radial-gradient(circle at 50% 44%,rgba(238,241,248,.76) 0,rgba(238,241,248,.46) 44%,rgba(238,241,248,.2) 74%,rgba(238,241,248,.16) 100%);opacity:var(--wash,1)}
+.fo{position:absolute;left:50%;top:calc(50% + var(--nav) / 2 - 8px);width:min(58.125rem,calc(100% - 3rem));transform:translate3d(-50%,-50%,0);text-align:center;font-family:var(--fo-face);line-height:1.55;color:var(--fo-ink);will-change:transform,opacity}
+.fo-label{display:inline-flex;align-items:center;gap:10px;padding:7px 15px 7px 12px;border-radius:99px;color:#1577b6;font:800 .67rem/1.55 var(--fo-face);letter-spacing:.2em;text-transform:uppercase;background:rgba(255,255,255,.86);border:1px solid rgba(56,169,255,.34);box-shadow:0 6px 20px rgba(20,58,112,.1),inset 0 1px 0 #fff}
+.fo-label::before{content:"";width:24px;height:2px;border-radius:99px;background:linear-gradient(90deg,var(--o-pink),var(--o-blue))}
+.fo h2{margin:18px auto 0;font:800 clamp(2rem,4.4vw,4.4rem)/1.02 var(--fo-face);letter-spacing:-.045em;color:var(--fo-ink);text-shadow:0 1px 0 rgba(255,255,255,.9),0 0 34px rgba(238,244,255,.95),0 0 70px rgba(238,244,255,.7)}
+.fo-grad{background:var(--fo-ramp);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 0 16px rgba(238,244,255,.95)) drop-shadow(0 0 40px rgba(238,244,255,.7))}
+.fo-sub{max-width:48.75rem;margin:18px auto 0;color:#4b5769;font-size:clamp(.96rem,1.25vw,1.12rem);line-height:1.62;text-shadow:0 0 22px rgba(238,244,255,.95),0 0 44px rgba(238,244,255,.8)}
+.fo-sub b{font-weight:750;color:#1e2a3c}
+.fo-sub .nw{white-space:nowrap}
+/* the summary: a white card that floats, lit from above, with the company's ramp along its top edge */
+.fo-card{position:relative;isolation:isolate;width:min(51.25rem,100%);margin:24px auto 0;overflow:hidden;border:1px solid rgba(56,169,255,.4);border-radius:24px;background:linear-gradient(180deg,#fff 0%,#eef6ff 62%,#e4f0ff 100%);
+  box-shadow:0 1px 1px rgba(16,42,84,.05),0 6px 14px -4px rgba(16,42,84,.1),0 22px 44px -14px rgba(16,42,84,.2),0 54px 96px -30px rgba(16,42,84,.26),0 0 0 6px rgba(56,169,255,.07),inset 0 1px 0 #fff;transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
+.fo-card:hover{transform:translateY(-3px);box-shadow:0 1px 1px rgba(16,42,84,.05),0 8px 18px -4px rgba(16,42,84,.11),0 30px 56px -14px rgba(16,42,84,.22),0 68px 110px -30px rgba(16,42,84,.3),0 0 0 6px rgba(56,169,255,.09),inset 0 1px 0 #fff}
+.fo-card::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;z-index:2;background:linear-gradient(90deg,rgba(255,61,154,0),#ff4fb0 18%,#7c5cff 50%,#52c8ff 82%,rgba(56,169,255,0)) 0 0 / 220% 100%;animation:foRule 9s var(--ease-io) infinite}
+.fo-card::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(80% 120% at 12% -10%,rgba(255,255,255,.95),rgba(255,255,255,0) 55%),radial-gradient(70% 100% at 100% 0%,rgba(255,79,176,.1),rgba(255,79,176,0) 60%),radial-gradient(90% 120% at 50% 115%,rgba(56,169,255,.16),rgba(56,169,255,0) 62%)}
+@keyframes foRule{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
+.fo-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;padding:16px 24px;border-bottom:1px solid rgba(56,169,255,.22);background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(238,246,255,.72))}
+.fo-mark{justify-self:start;display:grid;place-items:center;width:46px;height:46px;border-radius:14px;font:700 .92rem/1 var(--orb);color:#0d2b4a;background:linear-gradient(150deg,#fff,#dcecff);border:1px solid rgba(56,169,255,.45);box-shadow:0 6px 18px rgba(20,58,112,.16),inset 0 1px 0 #fff,inset 0 0 0 3px rgba(255,255,255,.72)}
+.fo-id{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.fo-id strong{font-size:clamp(1.24rem,2vw,1.5rem);font-weight:700;letter-spacing:-.03em;line-height:1.1}
+.fo-type{font:800 .63rem/1.55 var(--fo-face);letter-spacing:.15em;text-transform:uppercase;background:var(--fo-ramp-ink);-webkit-background-clip:text;background-clip:text;color:transparent}
+.fo-live{justify-self:end;display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:99px;font:800 .6rem/1.55 var(--fo-face);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;color:#0f7a4a;background:rgba(38,200,130,.12);border:1px solid rgba(38,200,130,.42)}
+.fo-live i{width:7px;height:7px;border-radius:50%;background:#22c07d;animation:foPulse 2.4s var(--ease) infinite}
+@keyframes foPulse{0%{box-shadow:0 0 0 0 rgba(34,192,125,.55)}70%,100%{box-shadow:0 0 0 7px rgba(34,192,125,0)}}
+.fo-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:rgba(56,169,255,.2)}
+.fo-facts > div{padding:13px 24px;background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(248,252,255,.97))}
+.fo-facts dt,.fo-cap{font:800 .6rem/1.55 var(--fo-face);letter-spacing:.15em;text-transform:uppercase;color:#1b7abf}
+.fo-facts dd{margin-top:5px;color:#28374d;font-size:.9rem;font-weight:650;line-height:1.45;text-wrap:balance}
+/* the north star, on its own night plate */
+.fo-amb{position:relative;overflow:hidden;padding:17px 24px 19px;border-top:1px solid rgba(56,169,255,.28);background:radial-gradient(120% 150% at 50% 0%,rgba(124,92,255,.28),rgba(124,92,255,0) 62%),linear-gradient(140deg,#0d1730,#122a52 58%,#0e2647)}
+.fo-amb::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background-image:radial-gradient(1.5px 1.5px at 12% 30%,rgba(255,255,255,.75),transparent),radial-gradient(1.5px 1.5px at 82% 24%,rgba(255,255,255,.6),transparent),radial-gradient(1.5px 1.5px at 62% 74%,rgba(255,255,255,.5),transparent),radial-gradient(1.5px 1.5px at 28% 78%,rgba(255,255,255,.55),transparent),radial-gradient(1.5px 1.5px at 94% 62%,rgba(255,255,255,.45),transparent)}
+.fo-amb .fo-cap,.fo-fig{position:relative;z-index:1}
+.fo-amb .fo-cap{color:#7fd0ff}
+.fo-fig{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:5px}
+.fo-fig strong{font:700 clamp(2rem,4vw,2.7rem)/1 var(--orb);letter-spacing:-.02em;background:linear-gradient(92deg,#7ee3ff,#b9a3ff 52%,#ff8fc8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.fo-fig span{color:rgba(219,232,250,.8);font-size:.86rem;line-height:1.45}
+/* the runway under the figure: drawn once, out from the middle, when the screen arrives */
+.fo-run{position:absolute;left:0;right:0;bottom:0;z-index:1;height:2px;background:linear-gradient(90deg,rgba(126,227,255,0),#7ee3ff 22%,#b9a3ff 60%,rgba(255,143,200,0));opacity:.7}
+html.gl .fo-run{transform:scaleX(0);transition:transform 1.5s var(--ease-io) .25s}
+html.gl .fo.on .fo-run{transform:none}
+.fo-go{display:inline-flex;align-items:center;gap:13px;min-height:44px;margin-top:20px;padding:11px 13px 11px 22px;border-radius:99px;color:var(--fo-ink);font:800 .7rem/1.55 var(--fo-face);letter-spacing:.18em;text-transform:uppercase;background:rgba(255,255,255,.92);border:1px solid rgba(20,58,112,.14);box-shadow:0 8px 26px rgba(20,58,112,.12),inset 0 1px 0 #fff;transition:transform .25s var(--ease),box-shadow .25s var(--ease),border-color .25s var(--ease),background .25s var(--ease)}
+.fo-go .chev{display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:50%;background:linear-gradient(140deg,var(--o-pink),#7c5cff);box-shadow:0 4px 12px rgba(255,61,154,.34);transition:transform .25s var(--ease)}
+.fo-go .chev::before{content:"";width:8px;height:8px;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(45deg) translate(-1px,-1px);animation:foPrompt 1.6s ease-in-out infinite}
+@keyframes foPrompt{50%{transform:rotate(45deg) translate(1px,1px);opacity:.6}}
+.fo-go:hover,.fo-go:focus-visible{transform:translateY(-2px);background:#fff;border-color:rgba(255,61,154,.5);box-shadow:0 14px 34px rgba(20,58,112,.2),inset 0 1px 0 #fff}
+.fo-go:hover .chev,.fo-go:focus-visible .chev{transform:translateY(2px)}
+.fo-go:active{transform:none;box-shadow:0 4px 14px rgba(20,58,112,.16),inset 0 1px 0 #fff}
+.fo-go:focus-visible{outline:2px solid #1a86c9;outline-offset:4px;border-radius:99px}
+/* each line of the heading holds one line; a tall narrow screen (a tablet upright) can carry it larger */
+@media (min-width:701px){
+  .fo h2{white-space:nowrap}
+}
+@media (min-width:701px) and (max-width:1100px) and (min-height:881px){
+  .fo h2{font-size:clamp(2.4rem,5.6vw,4.4rem)}
+}
+/* a short screen: the same screen, closer set, so it still reads as one */
+@media (min-width:701px) and (max-height:880px){
+  .fo h2{font-size:clamp(1.8rem,3.6vw,3.3rem)}
+  .fo-sub{margin-top:13px;font-size:clamp(.9rem,1.1vw,1rem)}
+  .fo-card{margin-top:18px}
+  .fo-head{padding:13px 24px}
+  .fo-mark{width:40px;height:40px;border-radius:12px}
+  .fo-facts > div{padding:11px 24px}
+  .fo-amb{padding:13px 24px 14px}
+  .fo-go{margin-top:15px}
+}
+@media (min-width:701px) and (max-height:660px){
+  .fo h2{margin-top:12px;font-size:clamp(1.6rem,3.1vw,2.7rem)}
+  .fo-sub{margin-top:9px;font-size:.88rem;line-height:1.5}
+  .fo-card{margin-top:13px;border-radius:20px}
+  .fo-head{padding:9px 22px}
+  .fo-facts > div{padding:8px 22px}
+  .fo-facts dd{margin-top:2px}
+  .fo-amb{padding:10px 22px 12px}
+  .fo-fig{gap:3px}
+  .fo-fig strong{font-size:2rem}
+  .fo-go{margin-top:11px;padding-block:7px}
+}
+/* a phone: one column, the facts stacked, the label sizes a phone can read */
+@media (max-width:700px){
+  #focus{--fo-orb:min(64vw,34vh)}
+  .fo-orb{top:27%}
+  .fo{width:calc(100% - 32px)}
+  .fo-label{font-size:.66rem;letter-spacing:.16em;padding:6px 13px 6px 11px}
+  .fo h2{margin-top:14px;font-size:clamp(1.38rem,7vw,3rem);line-height:1.08;text-wrap:balance}   /* each of its two lines holds one line down to a 320 px screen */
+  .fo-sub{margin-top:12px;font-size:clamp(.82rem,3.6vw,.95rem);line-height:1.5;text-wrap:balance}
+  .fo-sub br{display:none}
+  .fo-sub .nw{white-space:normal}
+  .fo-card{margin-top:18px;border-radius:18px}
+  .fo-head{grid-template-columns:auto minmax(0,1fr);gap:4px 12px;padding:14px 16px;text-align:left}
+  .fo-mark{width:42px;height:42px;border-radius:12px;grid-row:1 / span 2;align-self:start}
+  .fo-id{align-items:flex-start}
+  .fo-id strong{font-size:1.2rem}
+  .fo-type{font-size:.62rem;letter-spacing:.1em;line-height:1.5}
+  .fo-live{grid-column:2;justify-self:start;margin-top:5px;padding:5px 11px;font-size:.62rem}
+  .fo-facts{grid-template-columns:1fr}
+  .fo-facts > div{padding:10px 16px}
+  .fo-facts dt,.fo-cap{font-size:.64rem;letter-spacing:.12em}
+  .fo-facts dd{margin-top:2px}
+  .fo-amb{padding:13px 16px 15px}
+  .fo-fig strong{font-size:2.1rem}
+  .fo-fig span{font-size:.84rem}
+  .fo-go{margin-top:15px}
+}
+@media (max-width:700px) and (max-height:720px){
+  .fo h2{margin-top:10px}
+  .fo-sub{margin-top:8px;font-size:.8rem;line-height:1.45}
+  .fo-card{margin-top:12px}
+  .fo-head{padding:10px 14px}
+  .fo-live{margin-top:3px;padding-block:4px}
+  .fo-mark{width:36px;height:36px;border-radius:10px;font-size:.8rem}
+  .fo-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fo-facts > div{padding:8px 10px}
+  .fo-facts dt{font-size:.6rem;letter-spacing:.07em}
+  .fo-facts dd{font-size:.82rem}
+  .fo-amb{padding:10px 12px 12px}
+  .fo-fig strong{font-size:1.8rem}
+  .fo-fig span{font-size:.76rem}
+  .fo-go{margin-top:11px}
+}
+/* without the world: the same screen as an ordinary part of the page, its cool white turning to the paper below it */
+html.no-gl #focus{background:linear-gradient(var(--fo-sheet) 0,var(--fo-sheet) 74%,var(--porcelain) 100%);overflow:hidden}
+html.no-gl #focus .stage{min-height:100vh;min-height:100svh;display:grid;align-items:center}
+html.no-gl .fo-sheet{background:none}
+html.no-gl .fo{position:relative;left:auto;top:auto;transform:none;margin:calc(var(--nav) + clamp(28px,6vh,70px)) auto clamp(56px,11vh,120px)}
+@media print{
+  #focus{margin-bottom:0 !important;background:var(--fo-sheet)}
+  #focus .fo{position:relative;left:auto;top:auto;margin:40px auto;transform:none !important;opacity:1 !important;visibility:visible !important}
+  #focus .fo-sheet{opacity:1}
+  #focus .veil-paper{display:none}
+  #focus .fo-run{transform:none}
+}
 
 /* ───────── paper and night sheets ───────── */
 .paper,.night{position:relative;color:var(--fg);padding-block:clamp(84px,13vh,170px)}
