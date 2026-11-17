@@ -183,7 +183,10 @@ body.launching #rail.laid{transform:translateX(160%)}
 #rail.laid li{position:absolute;right:0}
 #rail.laid li a{height:100%}
 #rail .rk{position:absolute;right:-16.5px;top:0;width:44px;height:48px;margin-top:-24px;display:grid;place-items:center;color:var(--pink);cursor:grab;pointer-events:auto;touch-action:none;will-change:transform;-webkit-tap-highlight-color:transparent}
-#rail .rk svg{width:17px;height:34px;overflow:visible;transition:transform .25s var(--ease)}
+#rail .rk svg{width:9.6px;height:46px;overflow:visible;transition:transform .25s var(--ease)}   /* the site's one rocket (courier.js), standing nose up: 33 px of body and its flame */
+#rail .rk .rk-x{opacity:1;transform:scaleY(.6);transition:transform .25s var(--ease)}
+#rail .rk.held .rk-x{transform:scaleY(1)}                      /* it burns while it is pulled */
+#rail .rk.held .rk-xf{animation:rkBurn .14s ease-in-out infinite alternate}
 #rail .rk:focus{outline:none}
 #rail .rk.keys{outline:2px solid var(--pink);outline-offset:2px;border-radius:12px}   /* the ring is for the keyboard only */
 #rail .rk:hover svg,#rail .rk.keys svg,#rail .rk.held svg{transform:scale(1.16)}
@@ -1602,14 +1605,11 @@ html.has-cursor .chart .col{cursor:none}
 .chart .pt.actual .dot{fill:var(--o-blue)}
 .chart .pt.target .dot{fill:#141413;stroke:var(--o-mint)}
 .chart .cross{stroke:var(--line2);stroke-width:1;stroke-dasharray:4 5;opacity:0;pointer-events:none;transition:opacity .15s}
-/* the rocket that flies a line in: the rail's own drawing, with its flame lit only while it flies */
+/* the rocket that flies a line in: the site's one rocket (its drawing and colours are at the end of this file), with
+   its flame lit only while it flies */
 .rk{pointer-events:none}
-.rk-b{fill:var(--pink)}
-.rk-f{fill:var(--pink-3)}
-.rk-w{fill:#101010}
-.rk-x{fill:#F4F1EB;opacity:0;transform-box:fill-box;transform-origin:50% 0;transition:opacity .5s}
-.paper .rk-x{fill:var(--o-ember)}
-.rk.burn .rk-x{opacity:1;animation:rkBurn .14s ease-in-out infinite alternate}
+.rk.burn .rk-x{opacity:1}
+.rk.burn .rk-xf{animation:rkBurn .14s ease-in-out infinite alternate}
 @keyframes rkBurn{from{transform:scaleY(.7)}to{transform:scaleY(1.3)}}
 .donut .seg{transition:opacity .2s,transform .25s var(--ease)}
 .donut .dn-big{font:400 30px/1 var(--disp);letter-spacing:.01em;fill:var(--fg)}
@@ -1644,3 +1644,27 @@ html.no-gl .veil-paper{display:none}
 html.booting .hero{opacity:0}
 #nav,#rail{transition:color .35s,background .35s,transform .45s var(--ease),opacity .8s var(--ease) .2s}
 html.booting #nav,html.booting #rail{opacity:0;pointer-events:none}
+
+/* ───────── the one rocket, and the courier (js/courier.js) ─────────
+   One drawing, three places: the courier on its layer over the page, the handle on the progress rail, the rocket that
+   leads a chart's line. It is the launch rocket of the last part: porcelain, a pink nose and bands, a carbon base.
+   The keyline is what holds it on a white ground; on carbon it is not seen. */
+.rk-p{fill:#FBF9F5}
+.rk-h{fill:var(--pink)}
+.rk-c{fill:#191A1E;stroke:rgba(244,241,235,.36);stroke-width:1px;vector-effect:non-scaling-stroke;paint-order:stroke}
+.rk-s{fill:#101010;opacity:.15}
+.rk-k{fill:none;stroke:#101010;stroke-opacity:.62;stroke-width:2px;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.rk-xo{fill:var(--pink)}
+.rk-xi{fill:#FFF1F7}
+.rk-x{opacity:0;transform-box:fill-box;transform-origin:50% 0;transition:opacity .5s}
+.rk-xf{transform-box:fill-box;transform-origin:50% 0}
+/* the courier's layer: over the page's content, under the bar, the rail, the dialogs and the pointer; nothing in it
+   can be pressed. The rocket is drawn at its largest and only ever scaled down, so it stays sharp at every size. */
+#courier{position:fixed;inset:0;z-index:40;pointer-events:none;overflow:hidden;contain:strict}
+html.booting #courier{opacity:0}
+#courier .cr{position:absolute;left:0;top:0;width:0;height:0;visibility:hidden;will-change:transform,opacity}
+#courier svg{position:absolute;left:-12.8px;top:-50px;width:25.6px;height:100px;max-width:none;overflow:visible}
+#courier .rk-k{stroke-width:3.2px}
+#courier .rk-x{opacity:1;transform:scaleY(var(--f,.5));transition:none}
+#courier .rk-t{opacity:calc((var(--f,.5) - .72) * 1.5)}
+@media print{#courier{display:none}}

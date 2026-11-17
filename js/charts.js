@@ -5,6 +5,7 @@
    are listed, and every figure also names its channels in a legend, a tooltip and the matrix, never by colour alone.
    A small rocket (the rail's own) flies the two lines in as they are first seen and parks at the last point. */
 import { $, $$, el, svg, clamp, lerp, easeOut, easeInOut, fmtCompact, fmtGBP, onSeen, STILL } from './kit.js';
+import { rocketArt, ART } from './courier.js';
 
 /* fixed order and colour for every channel: six marketplaces, then the two direct channels */
 export const CHANNELS = [
@@ -62,16 +63,14 @@ function along(path, len, total) {
   const p = path.getPointAtLength(clamp(len, 0, total)), a = clamp(len - 6, 0, Math.max(0, total - 12)), p0 = path.getPointAtLength(a), p1 = path.getPointAtLength(Math.min(total, a + 12));
   return { x: p.x, y: p.y, deg: Math.atan2(p1.y - p0.y, p1.x - p0.x) * 180 / Math.PI };
 }
-/* the site's one rocket, the same drawing as the one on the progress rail (js/main.js), set down on a chart: the tip of
-   its flame sits `gap` px ahead of (x, y) and its nose points along `deg`. Parked, the flame is out, so the gap is
-   taken back by the flame's length (6.6 of the drawing's units) and the body stands just past the last point. */
+/* the site's one rocket (js/courier.js: the courier, and the handle on the progress rail), set down on a chart: the
+   tip of its flame sits `gap` px ahead of (x, y) and its nose points along `deg`. Parked, the flame is out, so the gap
+   is taken back by the flame's length (6.6 px for each unit of `s`) and the body stands just past the last point.
+   RK sets the drawing to the size the charts' rocket has always been: 19.5 px of body for each unit of `s`. */
+const RK = 19.5 / ART.len;
 function rocket(parent) {
-  const g = svg('g', { class: 'rk', 'aria-hidden': 'true' }, parent);
-  svg('path', { d: 'M4.4 19.4h4.2L6.5 26Z', class: 'rk-x' }, g);
-  svg('path', { d: 'M6.5 0C9.6 3.4 10.6 7.4 10.6 12v6.2H2.4V12C2.4 7.4 3.4 3.4 6.5 0Z', class: 'rk-b' }, g);
-  svg('path', { d: 'M2.4 13.5 0 19.5h2.4ZM10.6 13.5l2.4 6h-2.4Z', class: 'rk-f' }, g);
-  svg('circle', { cx: 6.5, cy: 8.4, r: 1.7, class: 'rk-w' }, g);
-  return { at(x, y, deg, s, gap) { g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(deg + 90).toFixed(1)}) scale(${s}) translate(-6.5 ${(-26 - gap / s).toFixed(2)})`); }, burn(on) { g.classList.toggle('burn', on); } };
+  const g = svg('g', { class: 'rk', 'aria-hidden': 'true' }, parent); rocketArt(g);
+  return { at(x, y, deg, s, gap) { const k = s * RK; g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(deg + 90).toFixed(1)}) scale(${k.toFixed(4)}) translate(0 ${(-ART.len - ART.tail - gap / k).toFixed(2)})`); }, burn(on) { g.classList.toggle('burn', on); } };
 }
 
 /* one tooltip per figure. show(x, y, { head, sub, rows, note }): rows are { name, value, c, direct, tag }: direct hatches

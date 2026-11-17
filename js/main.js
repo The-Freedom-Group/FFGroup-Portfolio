@@ -6,6 +6,7 @@ import { initJourney } from './journey.js';
 import { initCharts } from './charts.js';
 import { initCrew } from './crew.js';
 import { initSystem } from './sysmap.js';
+import { createCourier, rocketArt, ART } from './courier.js';
 
 const html = document.documentElement, body = document.body;
 let GL = html.classList.contains('gl');
@@ -44,7 +45,7 @@ const navLinks = $$('.nv-links a, .nv-cta'), navOf = {}; { let cur = null; parts
 const rail = $('#rail'), railOl = el('ol');
 const rkNo = el('b'), rkName = el('span');
 const rocket = el('div.rk', { role: 'slider', tabindex: '0', 'aria-label': 'Place in the story', 'aria-orientation': 'vertical', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0', 'data-cursor': 'Drag' }, el('span.rk-tag', { 'aria-hidden': 'true' }, rkNo, rkName));
-{ const s = svg('svg', { viewBox: '0 0 13 26', 'aria-hidden': 'true' }, rocket); svg('path', { d: 'M6.5 0C9.6 3.4 10.6 7.4 10.6 12v6.2H2.4V12C2.4 7.4 3.4 3.4 6.5 0Z', fill: 'currentColor' }, s); svg('path', { d: 'M2.4 13.5 0 19.5h2.4ZM10.6 13.5l2.4 6h-2.4Z', fill: 'currentColor', opacity: '.7' }, s); svg('path', { d: 'M4.4 19.4h4.2L6.5 26Z', fill: '#F4F1EB' }, s); svg('circle', { cx: 6.5, cy: 8.4, r: 1.7, fill: '#101010' }, s); }
+rocketArt(svg('svg', { viewBox: `${-ART.w / 2 - 0.5} -1 ${ART.w + 1} ${ART.len + ART.tail + 2}`, 'aria-hidden': 'true' }, rocket));   // the site's one rocket (courier.js), nose up, its flame under it
 const railItems = parts.map(s => { const li = el('li', null, el('a', { href: '#' + s.id, 'aria-label': s.no + ' ' + s.name }, el('span', { text: s.name }), el('i'))); railOl.append(li); return li; });
 rail.append(railOl, rocket);
 
@@ -216,6 +217,7 @@ soundBtn.addEventListener('click', async () => {
 
 /* ───────── the loop ───────── */
 let world = null, syS = scrollY, last = performance.now(), curPart = null, navTheme = '', lastMode; const veilPaper = $('#veilPaper');
+const courier = safe('courier', () => createCourier({ byId, sys, mapSpan: [MAP_A, MAP_B] }));   /* the small rocket that travels the story: told where the page is once a frame, after the world has been drawn */
 function pickWorld(mid) {
   /* the world behind whatever fills the middle of the screen; behind paper, whichever world is still in view at an edge */
   let at = sections.find(s => mid >= s.top && mid < s.top + s.h) || sections[sections.length - 1];
@@ -243,6 +245,7 @@ function frame(now) {
     veilPaper.style.setProperty('--v', world.veil.toFixed(3));   /* how far the paper has risen over the last of the cloud */
     sys.after(world.out); placeTags();
   }
+  if (courier) courier.frame(sy, syS, dt, now / 1000, world, padRooms);
   requestAnimationFrame(frame);
 }
 const mapStage = $('#map .stage');
@@ -327,7 +330,7 @@ async function start() {
     try {
       const { createWorld } = await import('./world.js');
       world = createWorld({ canvas: $('#world'), onProgress: (k, text) => { ldPct.textContent = two(Math.round(k * 100)); if (text) ldText.textContent = text; } });
-      window.freedom = { world, goTo, sections };
+      window.freedom = { world, goTo, sections, courier };
     } catch (e) { console.error('world', e); world = null; GL = false; html.classList.remove('gl'); html.classList.add('no-gl'); measure(); }
   }
   requestAnimationFrame(now => { last = now; frame(now); });

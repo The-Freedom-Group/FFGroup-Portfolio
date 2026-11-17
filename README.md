@@ -48,6 +48,10 @@ No build step and no dependencies to install: plain HTML, CSS and JavaScript mod
   (the system's rings, lanes and nova, and the sums that put each world on its ring where the page has room for it),
   `js/w-clouds.js` (the cloud on the way down and the way up), `js/w-pad.js` (the evening sky behind the last three
   parts, the launch pad, the rocket's arrival and the burn).
+- `js/courier.js` · the one rocket. Its drawing (the launch rocket in two dimensions: also the handle on the progress
+  rail and the rocket that leads the two chart lines), and the courier that flies the story on a layer of its own, from
+  its launch out of Enterprise to the top of the screen over the pad, where the launch rocket comes down in its place.
+  The page moves a target along a route measured from the layout; the rocket chases it.
 - `js/w-globe.js` · the expansion map's own globe: the logo's pink with white land, cut from the water map alone (never
   the Earth's photograph, clouds or city lights). It stands on the page's white by day and over the night sky after.
 - `assets/minis/` · the eight worlds as small pictures (96 px, and `@2x` at 192 px), rendered from the worlds
