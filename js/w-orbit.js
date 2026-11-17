@@ -89,7 +89,7 @@ export function createOrbit({ renderer, small, dpr, spec }) {
   const heroQ = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(dirHero, V(), V(0, 1, 0))), planeQ = new THREE.Quaternion(), tipQ = new THREE.Quaternion(), leanQ = new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), MK.lean), eul = new THREE.Euler();
   const tmp = V(), tmp2 = V(), e1 = V(), right = V(), up = V(), px = V(), py = V(), pc = V();
   let W = innerWidth, H = innerHeight, snap = true, novaPrimed = 0, intro = 0, introBodies = 0, sol = null, solKey = '';
-  const out = { worlds: {}, years: [], hero: new Array(16).fill(0), heroOk: false, dive: 0, focus: 0 };
+  const out = { worlds: {}, years: [], hero: new Array(16).fill(0), heroOk: false, dive: 0, focus: 0, lens: { u: 0.5, v: 0.5, r: 0.1, k: 0 }, hole: { x: 0, y: 0, r: 0 } };
   ids.forEach(id => { out.worlds[id] = { x: 0, y: 0, r: 0, a: 0 }; }); YEARS.forEach(() => out.years.push({ x: 0, y: 0, a: 0 }));
 
   function resize(w, h) { W = w; H = h; camera.aspect = w / h; camera.updateProjectionMatrix(); snap = true; }
@@ -147,7 +147,7 @@ export function createOrbit({ renderer, small, dpr, spec }) {
            while the opening is at rest (one world at a time), and not as its company arrives */
         if (!w.primed && !priming && showSys && w.k < 0.002 && bh < 0.01 && intro >= 1 && w.maps.every(t => t.image)) { priming = true; w.primeN = (w.primeN || 0) + 1; w.group.visible = true; w.group.position.set(0, 0, 0); w.group.scale.setScalar(0.1); if (w.primeN > 2) w.primed = true; }
       } else { w.size = mode === 'orbit' ? assembly : 1; w.group.scale.setScalar(Math.max(0.0001, w.size)); }
-      const on = !lit || lit.includes(id), bright = lit && on && id !== 'enterprise', sat = on ? (bright ? 1.12 : 1) : id === 'enterprise' ? 0.34 : 0.08, gain = on ? (bright ? 1.25 : 1) : id === 'enterprise' ? 0.62 : 0.44;   // Enterprise keeps a little of its pink: it is what the others hang from
+      const on = !lit || lit.includes(id), bright = lit && on && id !== 'enterprise', sat = on ? (bright ? 1.12 : 1) : id === 'enterprise' ? 0.6 : 0.42, gain = on ? (bright ? 1.25 : 1) : id === 'enterprise' ? 0.8 : 0.7;   // the others lose most of their colour but stay worlds; Enterprise keeps more of its pink: it is what the others hang from
       w.sat += (sat - w.sat) * kL; w.gain += (gain - w.gain) * kL; w.look.sat.value = w.sat; w.look.gain.value = w.gain; w.update(dt, time); });
     ent.group.rotation.set(0, 0, entTilt);
 
@@ -160,6 +160,12 @@ export function createOrbit({ renderer, small, dpr, spec }) {
       rig.position.set((MK.cx - MK.gx) * Y.markW * kpx, -(MK.cy - MK.gy) * Y.markW * kpx, 0).applyQuaternion(planeQ); rig.scale.setScalar(MK.a * Y.markW * kpx);
       ringMat.uniforms.k.value = rigK; ringMat.uniforms.charge.value = bh * bh; wellMat.uniforms.k.value = Math.min(1, bh * 1.4) * rigK; well.visible = bh > 0.004; ring.geometry.setDrawRange(0, Math.floor(RING_N * clamp(intro) / 3) * 3);
       bodies.forEach((b, i) => { const u = b.userData, th = (u.at + Math.sin(time * (0.21 + i * 0.07) + i * 2.1) * 1.3 - bh * (60 + i * 30)) * DEG; b.position.set(Math.cos(th), -Math.sin(th) * KY, 0); const kk = clamp(introBodies * 3 - i) * rigK * (1 - bh * 0.5); b.scale.setScalar(Math.max(0.0001, ease(kk))); b.rotation.y += dt * 0.4; });
+    }
+    /* the hole on the screen (the middle of the mark's orbit) and the bend it puts in the light round it, for the finish */
+    out.lens.k = 0;
+    if (rig.visible && mode === 'orbit' && bh > 0.004) {
+      const o = out.hole; project(rig.position, o); o.r = rig.scale.x * focal / Math.max(1, tmp2.copy(rig.position).sub(camera.position).dot(tmp.copy(cur.dir).negate()));
+      out.lens.u = o.x / W; out.lens.v = 1 - o.y / H; out.lens.r = Math.max(4, o.r) * 1.05 / H; out.lens.k = smooth(span(bh, 0.14, 0.72)) * (1 - span(bh, 0.93, 1));
     }
     /* the page's sheet as a matrix: a point u px across and v px down from the globe's place lies at px·u − py·v in the world */
     out.heroOk = false;

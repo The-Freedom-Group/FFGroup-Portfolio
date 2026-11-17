@@ -8,7 +8,8 @@
    - the whole map holds, then the dive at Freedom Global begins.
    This module keeps the timeline and everything written on the page; the world (w-orbit.js) draws what it is told and
    says where things ended up. Each company's world stands in the place the page's layout gives it (.slot). */
-import { $, $$, el, clamp, span, smooth } from './kit.js';
+import { $, $$, el, svg, clamp, span, smooth, STILL } from './kit.js';
+import { rocketArt, ART } from './courier.js';
 
 const ease5 = t => t * t * t * (t * (t * 6 - 15) + 10);
 const NOVA = 0.7, HOLD = 0.95, DIVE_LEAD = 0.675;                    // in screens: the nova, the finished map held, how long before the scene ends the dive starts
@@ -28,6 +29,8 @@ const PLAN = {
 /* the wordmark, measured off the logo artwork, in thousandths of its own width: [left, width, baseline, cap height] */
 const TYPE = { mkThe: [0, 137.5, 402.1, 37.3], mkFreed: [0, 664.6, 556.3, 89.3], mkM: [854.2, 145.8, 556.3, 89.3], mkGroup: [739.6, 260.4, 655.3, 36.5] };
 const ORBIT_C = [0.4652, 0.5042];                                    // the middle of the mark's orbit, across and down, in wordmark widths
+/* the mark's orbit as the artwork draws it, in wordmark widths: half its long and short axes and its lean; and the globe on it */
+const ORB = { a: 0.5456, b: 0.2496, lean: 54.42 * Math.PI / 180 }, GLOBE = { x: 0.759, y: 0.5086, r: 0.0742 };
 
 export function initSystem({ byId, onStep }) {
   const hero = $('#hero'), mark = $('#mark'), markO = $('#markO'), sysEl = $('#sys'), board = $('#sysBoard'), head = $('#sysHead'), stageTop = $('#top .stage'), stageSys = $('#system .stage');
@@ -55,6 +58,31 @@ export function initSystem({ byId, onStep }) {
   /* ───────── the first screen's parts, each with its own way into the hole ───────── */
   const parts = [$('.hero h1'), $('.hero-sub'), $('.hero-cta'), ...$$('#kpis li')].filter(Boolean).map((node, i) => ({ node, d: Math.min(0.5, i * 0.05), spin: -(1.9 + i * 0.4), x0: 0, y0: 0, last: -1 }));
   const type = $('.mk-type');
+  /* the rocket on the first screen: the courier's own drawing, flying the mark's orbit, behind the globe as it passes it.
+     As the screen is pulled away it is pulled in too: round and round on a shrinking orbit, faster as it falls, stretched
+     along its way and burning hard, until it is gone into the hole (it comes out of the new planet after the nova) */
+  const hrk = el('div.hero-rk', { 'aria-hidden': 'true' }), hpic = svg('svg', { viewBox: `${-ART.w / 2} -1 ${ART.w} ${ART.len + 2}`, class: 'rk burn' }, hrk), hflame = rocketArt(hpic, { trail: true });
+  mark.append(hrk);
+  const HR = { tr: '', op: -1, f: -1, clip: '', th0: 2.35 };
+  const orbAt = (th, s, mw, o) => { const lx = Math.cos(th), ly = -Math.sin(th) * ORB.b / ORB.a, c = Math.cos(ORB.lean), n = Math.sin(ORB.lean), A = ORB.a * mw * s;
+    o.x = ORBIT_C[0] * mw + A * (lx * c - ly * n); o.y = ORBIT_C[1] * mw - A * (lx * n + ly * c); return o; };
+  const q0 = { x: 0, y: 0 }, q1 = { x: 0, y: 0 };
+  function heroRocket(bh) {
+    const mw = S.markW; if (!mw) return;
+    const t = performance.now() / 1000, pe = clamp((bh - 0.03) / 0.8), fall = pe * pe, s = 1 - fall * 0.94;
+    const th = STILL ? HR.th0 : HR.th0 - t * 0.34 - fall * 7.5 - pe * 1.2;          // a lap in about eighteen seconds; more turns the further it falls
+    orbAt(th, s, mw, q0); orbAt(th - 0.03, s * (1 - 0.03 * (0.2 + pe * 2.4)), mw, q1);
+    const ang = Math.atan2(q1.y - q0.y, q1.x - q0.x), k = mw * 0.088 / 96, sx = k * (1 - 0.55 * fall), sy = k * (1 + 1.5 * fall);
+    const tr = `translate3d(${q0.x.toFixed(1)}px,${q0.y.toFixed(1)}px,0) rotate(${(ang * 180 / Math.PI + 90).toFixed(2)}deg) scale(${sx.toFixed(4)},${sy.toFixed(4)})`;
+    if (tr !== HR.tr) { HR.tr = tr; hrk.style.transform = tr; }
+    const op = Math.round(clamp(1 - span(pe, 0.7, 0.93)) * 50) / 50; if (op !== HR.op) { HR.op = op; hrk.style.opacity = op; hrk.style.visibility = op < 0.02 ? 'hidden' : ''; }
+    const f = Math.round((STILL ? 0.55 : 0.72 + 0.8 * pe) * 25) / 25; if (f !== HR.f) { HR.f = f; hflame.style.setProperty('--f', f); }
+    /* behind the globe: its disc is cut out of the rocket, in the rocket's own frame */
+    const gx = GLOBE.x * mw - q0.x, gy = GLOBE.y * mw - q0.y, gr = GLOBE.r * mw * (1 - fall); let clip = '';
+    if (Math.hypot(gx, gy) < gr + mw * 0.09) { const a = -(ang + Math.PI / 2), c = Math.cos(a), n = Math.sin(a), cx = (gx * c - gy * n) / sx, cy = (gx * n + gy * c) / sy, rx = gr / sx, ry = gr / sy;
+      clip = `path(evenodd,"M-300-300H300V400H-300ZM${(cx - rx).toFixed(1)} ${cy.toFixed(1)}A${rx.toFixed(1)} ${ry.toFixed(1)} 0 1 0 ${(cx + rx).toFixed(1)} ${cy.toFixed(1)}A${rx.toFixed(1)} ${ry.toFixed(1)} 0 1 0 ${(cx - rx).toFixed(1)} ${cy.toFixed(1)}Z")`; }
+    if (clip !== HR.clip) { HR.clip = clip; hrk.style.clipPath = clip || 'none'; }
+  }
 
   /* ───────── steps, year marks ───────── */
   const mini = id => el('img.mini', { src: `assets/minis/${id}.webp`, srcset: `assets/minis/${id}.webp 1x, assets/minis/${id}@2x.webp 2x`, width: 22, height: 22, alt: '' });
@@ -134,7 +162,7 @@ export function initSystem({ byId, onStep }) {
     const focus = hover || pinned || story;
     if (focus !== lastFocus || story !== lastStory) {
       lastFocus = focus; lastStory = story; S.focus = focus ? byCo[focus].worlds : null;
-      const card = focus || 'global';
+      const card = wide ? focus : focus || 'global';                    // wide: one company written out at a time, none while the whole map rests (every world in its colour, each with its name)
       cos.forEach(c => { c.node.classList.toggle('lit', c.co === focus); c.node.classList.toggle('dim', !!focus && c.co !== focus); c.node.classList.toggle('show', c.co === card); c.btn.setAttribute('aria-pressed', String(c.co === focus)); });
       if (story !== shown) { shown = story; if (story && onStep) onStep(cos.findIndex(c => c.co === story)); }
     }
@@ -151,6 +179,7 @@ export function initSystem({ byId, onStep }) {
       st.transform = `translate3d(${(Math.cos(th) * rr - p.x0).toFixed(1)}px,${(Math.sin(th) * rr - p.y0).toFixed(1)}px,0) rotate(${(th - ang0).toFixed(3)}rad) scale(${((1 - pe2) * (1 + 0.5 * pe)).toFixed(4)},${((1 - pe2) * (1 - 0.3 * pe)).toFixed(4)})`;
       st.opacity = clamp(1 - (pe - 0.62) * 3.2).toFixed(3);
     });
+    if (bh < 0.9995) heroRocket(bh);
     const tk = 1 - span(bh, 0.74, 0.95); if (type.__v !== tk) { type.__v = tk; type.style.opacity = tk >= 0.999 ? '' : tk.toFixed(3); }
     return S;
   }

@@ -252,6 +252,12 @@ html.no-gl .scene{background:var(--carbon);background-image:radial-gradient(circ
 .mk-o{position:absolute;left:calc(var(--mw) * .6848);top:calc(var(--mw) * .4344);width:calc(var(--mw) * .1484);height:calc(var(--mw) * .1484);border-radius:50%}
 .mark-flat{display:none;grid-column:1;grid-row:1;justify-self:center;width:min(100%,460px);height:auto}
 html.no-gl .mark{display:none}
+/* the rocket on the first screen (sysmap.js): the courier's drawing, its middle at the box's corner */
+.hero-rk{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2;will-change:transform,opacity}
+.hero-rk svg{position:absolute;left:-12.8px;top:-50px;width:25.6px;height:100px;max-width:none;overflow:visible}
+.hero-rk .rk-k{stroke-width:3.2px}
+.hero-rk .rk-x{opacity:1;transform:scaleY(var(--f,.7));transition:none}
+.hero-rk .rk-t{opacity:calc((var(--f,.5) - .72) * 1.5)}
 html.no-gl .mark-flat{display:block}
 .hero-copy{grid-column:2;grid-row:1;container-type:inline-size;min-width:0;max-width:41rem}
 .hero h1{font-size:min(6.6cqw,3.3rem);line-height:1;margin:0;letter-spacing:.012em}
@@ -261,14 +267,17 @@ html.no-gl .mark-flat{display:block}
 .hero-cta{margin-top:1.35em}
 .hero-cta span{display:inline-flex;align-items:center;gap:.9em;font:500 11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;padding:14px 22px;border-radius:999px;border:1px solid var(--pink);color:var(--fg)}
 .hero-cta span::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--pink);animation:pulse 2s ease-in-out infinite}
-.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:clamp(18px,3.4vh,30px)}
-.kpis li{background:var(--plate);border:1px solid var(--line);border-radius:6px;padding:14px 14px 12px;display:grid;align-content:start;will-change:transform,opacity}
-.kpis b{font:400 clamp(1.45rem,2.25vw,2.3rem)/1 var(--disp);letter-spacing:.012em;color:var(--c);font-variant-numeric:tabular-nums;white-space:nowrap}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:clamp(22px,4.2vh,40px);border-top:1px solid var(--line)}
+/* open figures, as the 14 Nov first screen had them: a big number in its colour and its words, no boxes; a hairline between */
+.kpis li{padding:clamp(12px,2vh,18px) clamp(12px,1.4vw,22px) 4px;display:grid;align-content:start;will-change:transform,opacity}
+.kpis li:first-child{padding-left:0}
+.kpis li + li{border-left:1px solid var(--line)}
+.kpis b{font:400 clamp(1.7rem,2.75vw,2.9rem)/1 var(--disp);letter-spacing:.012em;color:var(--c);font-variant-numeric:tabular-nums;white-space:nowrap}
 .kpis span{font-size:clamp(.74rem,.9vw,.86rem);line-height:1.35;font-weight:500;color:var(--fg2);margin-top:8px;text-wrap:balance}
-.kpis svg{width:100%;height:clamp(20px,2.9vh,30px);margin-top:10px;overflow:visible}
-.kpis path{fill:none;stroke:var(--c);stroke-width:2.5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.kpis svg{width:100%;max-width:120px;height:clamp(14px,2vh,20px);margin-top:10px;overflow:visible}
+.kpis path{fill:none;stroke:var(--c);stroke-width:1.8;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .kpis circle{fill:var(--c)}
-.kpis em{font:500 8.5px/1.3 var(--mono);letter-spacing:.04em;white-space:nowrap;text-transform:uppercase;font-style:normal;color:var(--fg3);margin-top:9px;text-align:center}
+.kpis em{font:500 8.5px/1.3 var(--mono);letter-spacing:.04em;white-space:nowrap;text-transform:uppercase;font-style:normal;color:var(--fg3);margin-top:8px;text-align:left}
 @media (max-width:1199px){.kpis em{white-space:normal}}
 
 /* 01 the system: the old map of the group, as a hierarchy. Enterprise at the top centre, the companies below it, each
@@ -333,12 +342,12 @@ html.no-gl .mark-flat{display:block}
   html.gl .sys-stats span{font:500 .9em/1.28 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg);display:block;margin-top:.55em}
   html.gl .sys-stats i{font-style:normal;font-size:.98em;line-height:1.3;color:var(--fg3);display:block;margin-top:.45em}
   /* where each world stands, and how big */
-  html.gl .co[data-co="enterprise"]{--x:64em;--y:12.6em;--r:3.6em}
-  html.gl .co[data-co="global"]{--x:64em;--y:21.7em;--r:2.1em}
-  html.gl .co[data-co="facilities"]{--x:39.2em;--y:23.2em;--r:2em}
-  html.gl .co[data-co="distribution"]{--x:91.2em;--y:25.4em;--r:1.9em}
-  html.gl .co[data-co="future29"]{--x:41em;--y:39.6em;--r:1.9em;--rw:4.7em}
-  html.gl .co[data-co="future30"]{--x:87.8em;--y:42.2em;--r:1.8em;--rw:4em}
+  html.gl .co[data-co="enterprise"]{--x:64em;--y:13.4em;--r:4.5em}
+  html.gl .co[data-co="global"]{--x:64em;--y:24.2em;--r:2.9em}
+  html.gl .co[data-co="facilities"]{--x:36.6em;--y:25.4em;--r:2.75em}
+  html.gl .co[data-co="distribution"]{--x:92.4em;--y:27.6em;--r:2.65em}
+  html.gl .co[data-co="future29"]{--x:40em;--y:42.4em;--r:2.5em;--rw:6.1em}
+  html.gl .co[data-co="future30"]{--x:88.6em;--y:44.6em;--r:2.4em;--rw:5.3em}
   /* what is written beside it */
   html.gl .fam{position:absolute;display:grid;gap:.6em;width:var(--w);align-content:start}
   html.gl .card{padding:.85em 1.05em .95em}
@@ -357,8 +366,8 @@ html.no-gl .mark-flat{display:block}
   html.gl .co[data-co="global"] .fam{--w:25em;left:calc(var(--x) - 12.5em);top:calc(var(--y) + var(--r) + .9em)}
   html.gl .co[data-co="facilities"] .fam{--w:28em;left:calc(var(--x) - var(--r) - 1.3em - var(--w));top:calc(var(--y) - var(--r))}
   html.gl .co[data-co="distribution"] .fam{--w:27.8em;left:calc(var(--x) + var(--r) + 1.3em);top:calc(var(--y) - var(--r))}
-  html.gl .co[data-co="future29"] .fam{--w:45.5em;left:5.9em;top:43em}
-  html.gl .co[data-co="future30"] .fam{--w:45.6em;left:76.6em;top:45.2em}
+  html.gl .co[data-co="future29"] .fam{--w:45.5em;left:5.9em;top:47.6em}
+  html.gl .co[data-co="future30"] .fam{--w:45.6em;left:76.6em;top:49.4em}
   html.gl .card.two{padding:0;display:grid;grid-template-columns:1fr 1fr}
   html.gl .card.two .row{padding:.8em 1em .85em}
   html.gl .card.two .row + .row{border-left:1px solid var(--line)}
@@ -367,6 +376,25 @@ html.no-gl .mark-flat{display:block}
   html.gl .sys-foot{position:absolute;left:5.9em;right:5.8em;bottom:.7em;display:flex;justify-content:space-between;align-items:center;gap:2em}
   html.gl .sys-foot .fine{font-size:1em;line-height:1.4;max-width:34em;text-align:right;text-wrap:balance}
   html.gl .sys-steps{flex-wrap:nowrap}
+  /* one company written out at a time, as the 14 Nov map had it: the bright one's card (Global's while the map rests);
+     every other world carries only its name on a pill. The figures keep their number and label. */
+  html.gl .fam{transition:opacity .45s var(--ease),visibility 0s linear .45s,filter .4s var(--ease)}
+  html.gl .co:not(.show) .fam{opacity:0;visibility:hidden}
+  html.gl .co.show .fam{transition:opacity .45s var(--ease),filter .4s var(--ease)}
+  html.gl .sys-stats i{display:none}
+  html.gl .sys-stats{grid-template-columns:repeat(4,8.6em)}
+  html.gl .sys-stats li{padding:.7em .8em .75em}
+  html.gl .lb{display:inline-flex;align-items:center;gap:.7em;position:absolute;left:var(--x);top:calc(var(--y) + var(--r) + .75em);transform:translateX(-50%);font:500 .86em/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--fg);white-space:nowrap;padding:.62em 1em .62em .85em;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:999px;background:#101010d9;z-index:3;transition:opacity .4s var(--ease),visibility 0s}
+  html.gl .lb::before{content:"";width:.62em;height:.62em;border-radius:50%;background:var(--c);flex:none}
+  html.gl .lb b{font-weight:500}
+  html.gl .lb b + b::before{content:"& ";color:var(--pink)}
+  html.gl .lb .tag{font-size:.86em;padding:.38em .7em;color:var(--fg2);border-color:var(--line2)}
+  html.gl .co[data-co="enterprise"] .lb{top:auto;bottom:calc(65.6em - var(--y) + var(--r) + .75em)}
+  html.gl .co.show .lb,html.gl .co.off .lb{opacity:0;visibility:hidden;transition:opacity .3s var(--ease),visibility 0s linear .3s}
+  html.gl .co.dim .lb{opacity:.55}
+  html.gl .lb .lx,html.gl .lb .tag{display:none}
+  html.gl .co[data-co="enterprise"] .lb{display:none}
+  html.gl .co.show .fam{z-index:4}
 }
 
 /* the narrow map: the worlds in a column, one card at a time */
@@ -1501,7 +1529,7 @@ html.no-lift.modal-up #cursor{visibility:hidden}
   .hero-cta{margin-top:1em}
   .hero-cta span{padding:11px 16px;font-size:10px}
   .kpis{gap:6px;margin-top:14px}
-  .kpis li{padding:10px 9px 9px}
+  .kpis li{padding:10px 9px 4px}
   .kpis b{font-size:clamp(1.15rem,5.6vw,1.9rem)}
   .kpis span{font-size:.66rem;margin-top:5px}
   .kpis svg{height:16px;margin-top:6px}

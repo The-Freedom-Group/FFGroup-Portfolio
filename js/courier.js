@@ -1,10 +1,12 @@
 /* The courier: the small rocket that travels the whole story. It is the launch rocket of the last part (w-pad.js: the
    porcelain body, the pink nose and bands, the two boosters) drawn once in two dimensions, and that one drawing is also
    the handle on the progress rail and the rocket that leads the two chart lines.
-   It is not in the opening. Once the system has built itself it launches out of Enterprise and patrols behind it,
+   The first screen has its own copy (sysmap.js), which falls into the hole; this one comes out of the new planet after
+   the nova and circles it while the map builds. Once the system has built itself it patrols behind Enterprise,
    through the open sky under the heading and under the four figures; it goes into Freedom Global ahead of the dive, is
    seen falling through the cloud, and holds beside the investment focus; down the journey it is the head of the line
-   on the left; beside the figures, the team and Beyond it keeps to the free margin; it circles the expansion map's
+   on the left; beside the figures, the plan, the team and Beyond it rests in a margin and crosses the page to the
+   other one now and then; it circles the expansion map's
    globe, in front and then away behind it; it rounds the raise at dusk; and as the view comes down to the launch pad
    it climbs out through the top of the screen on the very line the launch rocket then comes down.
    The page moves a target along that route; the rocket chases it (it is never glued to the scroll), turns its nose
@@ -92,9 +94,11 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
     const rail = $('#rail'), rk = rail && $('.rk', rail); railX = rk && getComputedStyle(rail).display !== 'none' ? rk.getBoundingClientRect().left : 1e5;
     navH = ($('#nav') || {}).offsetHeight || 64;
     /* the left margin of each reading sheet: from the edge of the screen to where its words begin */
-    MARGIN.forEach(id => { const w = $('.wrap', byId[id].sec); let free = w ? w.getBoundingClientRect().left + parseFloat(getComputedStyle(w).paddingLeft) : 0;
-      if (id === 'crew') { const wide = $('.crew-wide', byId[id].sec); if (wide && wide.offsetParent) free = Math.min(free, wide.getBoundingClientRect().left + parseFloat(getComputedStyle(wide).paddingLeft)); }   // the staff chart runs wider than the words
-      gut[id] = { ok: free >= 48, x: free / 2, len: room(free) }; });
+    const edgeR = railX < 1e4 ? railX - 8 : vw;
+    MARGIN.forEach(id => { const w = $('.wrap', byId[id].sec), r = w && w.getBoundingClientRect(); let free = r ? r.left + parseFloat(getComputedStyle(w).paddingLeft) : 0, end = r ? r.right - parseFloat(getComputedStyle(w).paddingRight) : vw;
+      if (id === 'crew') { const wide = $('.crew-wide', byId[id].sec); if (wide && wide.offsetParent) { const q = wide.getBoundingClientRect(), cs = getComputedStyle(wide); free = Math.min(free, q.left + parseFloat(cs.paddingLeft)); end = Math.max(end, q.right - parseFloat(cs.paddingRight)); } }   // the staff chart runs wider than the words
+      const freeR = edgeR - end;
+      gut[id] = { ok: free >= 48, x: free / 2, len: room(free), rok: freeR >= 48, rx: end + freeR / 2, rlen: room(freeR) }; });
     /* the journey's line */
     const line = $('#jrLine'), j = $('#jr');
     if (line && j && getComputedStyle(line).display !== 'none') { const r = j.getBoundingClientRect(), x = line.getBoundingClientRect().left + 0.5; jr.ok = x >= 26; jr.x = x; jr.top = r.top + scrollY; jr.bottom = r.bottom + scrollY; jr.shift = Math.min(40, x * 0.5); jr.len = clamp(vh * 0.062, 40, 56); } else jr.ok = false;
@@ -172,9 +176,19 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
      how much the scroll feeds its flame (thr), the disc it is behind (hide), a line it does not show above (cut).
      show: this part of the story has the courier in it. dock: hidden where it stands, to be shown from there. */
   const T = { show: false, x: 0, y: 0, len: 40, a: 1, face: null, k: 7, thr: 0, hide: null, cut: 0, dock: false, hard: false }, P = { x: 0, y: 0 }, hole = { x: 0, y: 0, r: 0 };
-  let dir = 1, lead = 0, sysOn = false, sysU = 0, orbitOn = false, th = PI, rsOn = false, rsD = 0, loOn = false, loE = 0, run = 0, lastS = 0, lastSy = 0, sv = 0;
+  let dir = 1, lead = 0, sysOn = false, sysU = 0, orbitOn = false, preOn = false, pth = 0, curMid = 0, side = 0, th = PI, rsOn = false, rsD = 0, loOn = false, loE = 0, run = 0, lastS = 0, lastSy = 0, sv = 0;
   const partAt = mid => { let id = MARGIN[0]; for (const m of MARGIN) if (mid >= byId[m].top) id = m; return id; };
-  function margin(id) { const g = gut[id]; if (!g || !g.ok) return false; T.show = true; T.x = g.x; T.y = vh * 0.5 + lead; T.len = g.len; T.face = dir > 0 ? DOWN : UP; T.thr = 0.55; return true; }
+  /* the reading parts: it rests in a margin, and every so often (every screen and a bit of scroll) it crosses the page
+     to the other margin, on a long diagonal, nose first, with its trail out: the old site's rocket did the same. The
+     crossing is its own flight (the scroll only says which side it should be on), so it never stops over the words */
+  const CROSS = 1.15;
+  function margin(id) {
+    const g = gut[id]; if (!g || !g.ok) return false; T.show = true; T.face = dir > 0 ? DOWN : UP; T.thr = 0.55;
+    const u = (curMid - byId[id].top) / vh, want = g.rok ? ((Math.floor(u / CROSS) % 2) + 2) % 2 : 0;
+    side = want; const right = side === 1;
+    T.x = right ? g.rx : g.x; T.len = right ? g.rlen : g.len; T.y = vh * (right ? 0.36 : 0.62) + lead; T.k = 4; T.hard = true;     // k: a crossing takes about a second
+    return true;
+  }
   /* the journey: it is the head of the line's pink fill, which ends at the middle of the screen. Before the line has
      come up that far, and after it has gone, it waits a little to the left of it, clear of the headings */
   function onLine(sy, flat) {
@@ -185,9 +199,9 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
   }
   function aim(sy, syS, dt, world, rooms, flat, moved) {
     T.show = false; T.a = 1; T.face = null; T.k = 7; T.thr = 0; T.hide = null; T.cut = 0; T.dock = false; T.hard = false; T.len = 40;
-    const mid = syS + vh * 0.5, wasOrbit = orbitOn, wasRs = rsOn, wasLo = loOn; orbitOn = rsOn = loOn = false;   // round the globe, round the brief, up from the pad: each begins afresh when the story comes back to it
+    const mid = syS + vh * 0.5, wasOrbit = orbitOn, wasRs = rsOn, wasLo = loOn, wasPre = preOn; orbitOn = rsOn = loOn = preOn = false; curMid = mid;   // round the globe, round the brief, up from the pad: each begins afresh when the story comes back to it
     if (flat) { if (mid >= J.top - vh && mid < byId.traction.top + vh) onLine(sy, true); return; }   // no flight: it stands at the head of the journey's line
-    if (B.x < 0) { sysOn = false; return; }                                                          // the opening: it is away
+    if (B.x < 0 && sys.state.born < 0.5) { sysOn = false; return; }                                  // the opening: it is away (in the first screen's own rocket, sysmap.js) until the new planet is born
     const out = world.out;
     /* 01 · the system, and the dive at Freedom Global */
     if (F.x < -0.3) {
@@ -199,9 +213,21 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
         const g = out.worlds.global; T.x = g.x; T.y = g.y; if (!sysOn || !rt) { T.a = 0; T.dock = true; return; }
         T.len = lerp(rt.size, 9, span(out.dive, 0.015, 0.12)); T.a = 1 - span(out.dive, 0.08, 0.14); T.k = 6; T.dock = T.a < 0.004; return;
       }
+      /* the new planet: it comes out of it after the nova and circles it close, behind and in front, while the map builds */
+      const o = out.worlds.enterprise;
+      if (!built && !sysOn && o.r > 3) {
+        if (!wasPre) pth = PI * 0.35; preOn = true;
+        const rx = Math.max(o.r * 2.25, 46), ry = rx * 0.3, tl = -0.16, a = smooth(span(S.born, 0.55, 0.85));
+        pth -= Math.min(moved * 0.6 + 70 * dt, 700 * dt) / rx; if (pth < -PI) pth += TAU;
+        const ex = Math.cos(pth) * rx * (0.35 + 0.65 * a), ey = Math.sin(pth) * ry * (0.35 + 0.65 * a);
+        T.x = o.x + ex * Math.cos(tl) - ey * Math.sin(tl); T.y = o.y + ex * Math.sin(tl) + ey * Math.cos(tl); T.len = clamp(o.r * 0.95, 22, 42); T.k = 10; T.a = a; T.dock = a < 0.004;
+        if (T.dock) { T.x = o.x; T.y = o.y; }
+        if (Math.sin(pth) < 0) { hole.x = o.x; hole.y = o.y; hole.r = o.r * 0.97; T.hide = hole; }
+        return;
+      }
       if (!rt || (!built && !sysOn)) { T.a = 0; T.dock = true; T.x = E.x; T.y = E.y; return; }       // not yet: it waits behind Enterprise
       const tr = rt.tr;
-      if (!sysOn) { sysOn = true; sysU = 0; T.a = 0; T.dock = true; T.x = E.x; T.y = E.y; return; }   // it always sets out from behind Enterprise, wherever it was before
+      if (!sysOn) { sysOn = true; sysU = 0; if (!wasPre) { T.a = 0; T.dock = true; T.x = E.x; T.y = E.y; return; } }   // it sets out from behind Enterprise; straight on from the close orbit if it was on it
       if (!built) {                 /* the story has gone back to before the system stood: home behind Enterprise by the shorter way, then out of sight */
         const u = ((sysU % tr.len) + tr.len) % tr.len; let to = rt.homes[0]; for (const h of rt.homes) if (Math.abs(h - u) < Math.abs(to - u)) to = h;
         const step = 1100 * dt; if (Math.abs(to - u) <= step + 2) { sysOn = false; T.a = 0; T.dock = true; T.x = E.x; T.y = E.y; return; } sysU = u + Math.sign(to - u) * step;

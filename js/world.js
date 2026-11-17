@@ -75,6 +75,7 @@ export function createWorld({ canvas, onProgress }) {
       clouds.update(fam === 'space' ? 'down' : null, s.focus.pe, time, W / H);
       /* the way down comes out into even daylight, so the lens stops darkening the corners there */
       post.uniforms.vignette.value = finish.vignette * (1 - (clouds.st.downAt === time ? clouds.st.flat : 0));
+      Object.assign(post.st.lens, orbit.out.lens);                    // the opening's hole bends the light round it
       post.render(orbit.scene, orbit.camera, time, clouds.st.on ? r => clouds.draw(r) : null);
     }
     /* keep the frame rate: draw fewer pixels when frames run long, more again when they are comfortably short */
