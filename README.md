@@ -15,7 +15,7 @@ One page that tells the investment story from top to bottom:
 | 05 | The expansion map | The globe, nine territories and their routes home to Bury. |
 | 06 | The growth plan | Eight channels, 2026 to 2031: stacked, grouped or share; a year breakdown; the data table. |
 | 07 | The 2036 horizon | The line to £100.59m, the 2036 mix, how the mix shifts, what the ambition assumes. |
-| 08 | The team | Headcount, org chart, by division, by employment type; anyone in full; the roles opening next. |
+| 08 | The team | Headcount; the staff chart three ways (spider diagram, matrix, by employment type) with a filter by division; anyone in full; the roles opening next. |
 | 09 | The raise | What capital unlocks, climbing through cloud at dusk. |
 | 10 | Beyond | What Freedom Global creates, the flywheel, the three scenarios. |
 | 11 | Liftoff | The launch pad at night: the rocket comes down and stands. Press for liftoff and the page burns back to the top. |
