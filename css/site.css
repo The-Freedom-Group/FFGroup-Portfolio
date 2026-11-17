@@ -384,9 +384,9 @@ html.no-gl .mark-flat{display:block}
   html.gl .sys-stats i{display:none}
   html.gl .sys-stats{grid-template-columns:repeat(4,8.6em)}
   html.gl .sys-stats li{padding:.7em .8em .75em}
-  html.gl .lb{display:inline-flex;align-items:center;gap:.7em;position:absolute;left:var(--x);top:calc(var(--y) + var(--r) + .75em);transform:translateX(-50%);font:500 .86em/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--fg);white-space:nowrap;padding:.62em 1em .62em .85em;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:999px;background:#101010d9;z-index:3;transition:opacity .4s var(--ease),visibility 0s}
-  html.gl .lb::before{content:"";width:.62em;height:.62em;border-radius:50%;background:var(--c);flex:none}
-  html.gl .lb b{font-weight:500}
+  html.gl .lb{display:inline-flex;align-items:center;gap:.7em;position:absolute;left:var(--x);top:calc(var(--y) + var(--r) + .75em);transform:translateX(-50%);font:500 1em/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--fg);white-space:nowrap;padding:.55em .9em .55em .75em;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:999px;background:#101010d9;z-index:3;transition:opacity .4s var(--ease),visibility 0s}
+  html.gl .lb::before{content:"";width:.55em;height:.55em;border-radius:50%;background:var(--c);flex:none}
+  html.gl .lb b{font-weight:500;font-size:.86em}          /* the words smaller, the pill itself at the board's size: its place is in the board's em */
   html.gl .lb b + b::before{content:"& ";color:var(--pink)}
   html.gl .lb .tag{font-size:.86em;padding:.38em .7em;color:var(--fg2);border-color:var(--line2)}
   html.gl .co[data-co="enterprise"] .lb{top:auto;bottom:calc(65.6em - var(--y) + var(--r) + .75em)}
