@@ -1079,22 +1079,30 @@ html.no-gl .xm-lines,html.no-gl .xm-pins{display:none}
 .face.logo.light img{width:76%;height:76%}
 .face.logo.dark{background:#000}
 .pills{display:flex;flex-wrap:wrap;gap:6px}
-.pill{font:500 9px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:5px 9px;border:1px solid var(--line2);border-radius:11px;color:var(--fg2);text-align:center}
-.pill.acc{color:var(--c);border-color:var(--c)}
+.pill{font:500 9px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:5px 9px;border:1px solid var(--line2);border-radius:11px;color:var(--fg2);text-align:left}
+.pill.acc{display:inline-flex;align-items:center;gap:6px;color:var(--c);border-color:var(--c)}
+.pill.acc > i{width:7px;height:7px;border-radius:50%;background:var(--c);flex:none}
 .pill.win{color:var(--o-mint);border-color:var(--o-mint);background:rgba(47,224,160,.1)}
 .pill.win::before{content:"✓";margin-right:5px}
+/* an employment type's mark (crew.js draws it: round for the team, square for those outside it) */
+.em-mark{width:9px;height:9px;flex:none;overflow:visible}
+.pill .em-mark{width:8px;height:8px}
+/* a job secured is good news, so it reads green wherever it is marked */
+.ok{font:normal 700 11px/1 var(--sans);color:var(--o-mint)}
 
-/* the spider diagram: how to explore it, then the diagram, measured in real pixels by crew.js */
-.sp-guide{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 22px;width:fit-content;max-width:100%;margin:0 auto 4px;padding:10px 22px;border:1px solid var(--line2);border-radius:999px;font:400 12.5px/1.3 var(--sans);color:var(--fg2)}
-.sg-lead{font:500 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--fg3);padding-right:20px;border-right:1px solid var(--line2);align-self:stretch;display:grid;place-items:center}
-.sg-item{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
-.sg-item b,.tm-guide .row b{color:var(--fg);font-weight:600}
-.sg-ic{width:17px;height:17px;flex:none}
-.sg-hover .sg-ic{color:var(--o-pink)}
-.sg-click .sg-ic{color:var(--o-blue)}
-.sg-node{width:13px;height:13px;flex:none;border-radius:50%;background:conic-gradient(#ff3d9a,#ff6a3d,#fbbf24,#2fe0a0,#38a9ff,#a78bfa,#ff3d9a)}
-.sp-hint{display:none;font:400 10px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--fg3);text-align:center;margin-top:8px}
-.sp-scroll{overflow-x:auto;overflow-y:hidden;padding-block:6px;scrollbar-width:thin}
+/* the spider diagram: one quiet line (the key to the marks, and how to use it), then the diagram, measured in real
+   pixels by crew.js */
+.sp-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px 40px;max-width:calc(var(--wrap) - 2 * var(--gut));margin-inline:auto;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.sp-key{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;font:500 10px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--fg2)}
+.sp-key .k-lead{color:var(--fg3);letter-spacing:.18em;margin-right:2px}
+.sp-key .k{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.sp-key .em-mark{color:var(--fg)}
+.sp-key .k-win i{font:normal 700 11px/1 var(--sans);color:var(--o-mint)}
+.sp-guide{font:400 12px/1.5 var(--sans);color:var(--fg3)}
+.sp-guide b{color:var(--fg2);font-weight:600}
+.sp-guide i{font-style:normal;margin:0 .75em}
+.sp-hint{display:none;flex-basis:100%;font:400 10px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--fg2)}
+.sp-scroll{overflow-x:auto;overflow-y:hidden;padding-block:clamp(14px,2vh,26px) 6px;scrollbar-width:thin}
 .spider{position:relative;min-width:1120px;height:800px}
 .sp-svg{position:absolute;left:0;top:0;max-width:none;overflow:visible}
 /* the soft circles of the divisions, overlapping behind the hub */
@@ -1108,8 +1116,8 @@ html.no-gl .xm-lines,html.no-gl .xm-pins{display:none}
 .spoke .trace{stroke-width:3;opacity:0;stroke-dasharray:1;stroke-dashoffset:1}
 .spoke .trace.on{opacity:1;stroke-dashoffset:0;transition:stroke-dashoffset .55s var(--ease-io),opacity .12s}
 /* everything but the chosen spoke falls back */
-.spider .spoke,.spider .leaf,.spider .sp-node{transition:opacity .3s var(--ease)}
-.spider.focused .spoke:not(.hot),.spider.focused .leaf:not(.hot),.spider.focused .sp-node:not(.hot){opacity:.16}
+.spider .spoke,.spider .leaf,.spider .sp-node,.spider .sp-head{transition:opacity .3s var(--ease)}
+.spider.focused .spoke:not(.hot),.spider.focused .leaf:not(.hot),.spider.focused .sp-node:not(.hot),.spider.focused .sp-head:not(.hot){opacity:.16}
 .spider.focused .venn{opacity:.35}
 .sp-hub{position:absolute;z-index:2;display:grid;justify-items:center;text-align:center;padding:4px 6px;border-radius:14px}
 .sp-hub .face{--s:calc(var(--hub,220px) * .235);margin-bottom:8px}
@@ -1121,30 +1129,37 @@ html.no-gl .xm-lines,html.no-gl .xm-pins{display:none}
 .sp-node i{width:calc(17px * var(--k,1));height:calc(17px * var(--k,1));border-radius:50%;background:var(--c);border:2px solid #F4F1EB;transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
 .sp-node:hover i,.sp-node.hot i{transform:scale(1.28)}
 .sp-node[aria-pressed="true"] i{box-shadow:0 0 0 3px #101010,0 0 0 4.5px var(--c)}
+/* a division's label over its people: the dot stands over the faces, the words line up with the names */
+.sp-head{position:absolute;z-index:2;display:flex;align-items:center;gap:calc(var(--av,38px) / 2 + 12px * var(--k,1) - 4px);white-space:nowrap}
+.sp-head.a-left{flex-direction:row-reverse}
+.sp-head > i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.sp-head span{display:flex;align-items:baseline;gap:.9em;font:500 calc(10.5px * var(--k,1))/1.2 var(--mono);letter-spacing:.16em;text-transform:uppercase}
+.sp-head b{font-weight:500;color:var(--c)}
+.sp-head em{font-style:normal;color:var(--fg3);letter-spacing:.06em}
+/* a person: the face, then two lines, the name and the role (the role carries the mark of the employment type) */
 .leaf{position:absolute;z-index:2;display:flex;align-items:center;gap:calc(12px * var(--k,1));text-align:left;border-radius:8px}
 .leaf.a-left{flex-direction:row-reverse;text-align:right}
 .leaf .face{--s:var(--av,38px)}
-.lf{display:block;max-width:var(--lw,230px)}
-.lf > span{display:block}
-.lf-name{font:400 calc(16px * var(--k,1))/1.12 var(--disp);letter-spacing:.025em;text-transform:uppercase;white-space:nowrap;transition:color .2s}
-.lf-name i{font:normal 400 11px/1 var(--sans);color:var(--pink);vertical-align:2px}
-.lf-role{font:400 calc(10px * var(--k,1))/1.35 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--fg2);margin-top:4px;white-space:nowrap}
-.lf-meta{font:500 calc(9px * var(--k,1))/1.35 var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--fg3);margin-top:2px;white-space:nowrap}
+.lf{display:flex;flex-direction:column;align-items:flex-start;gap:calc(5px * var(--k,1))}
+.leaf.a-left .lf{align-items:flex-end}
+.lf-name{display:flex;align-items:center;gap:6px;font:400 calc(16.5px * var(--k,1))/1.1 var(--disp);letter-spacing:.025em;text-transform:uppercase;white-space:nowrap;transition:color .2s}
+.lf-name .star{font:normal 400 11px/1 var(--sans);color:var(--pink)}
+.lf-role{display:flex;align-items:center;gap:7px;font:400 calc(10px * var(--k,1))/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--fg2);white-space:nowrap}
+.leaf.a-left .lf-role{flex-direction:row-reverse}
+.lf-role .em-mark{color:var(--fg);width:calc(9px * var(--k,1));height:calc(9px * var(--k,1))}
 .leaf:hover .lf-name,.leaf.me .lf-name,.leaf.sel .lf-name{color:var(--c)}
 .leaf.sel .face{box-shadow:0 0 0 2px #101010,0 0 0 3.5px var(--c)}
-/* a job secured is good news, so it reads green whatever the division */
-.leaf.win .lf-name{width:fit-content;padding:2px 5px 1px;margin-right:-5px;border-radius:3px;background:rgba(47,224,160,.15)}
-.leaf.win.a-left .lf-name{margin-left:auto}
-.leaf.win.a-right .lf-name{margin:0 0 0 -5px}
-.leaf.win .lf-meta{color:var(--o-mint)}
-/* when the hub comes on screen (crew.js marks the diagram .go): the spokes run out from the hub and the names follow */
+/* a job secured: the name on a green ground, with its tick (the key says what it means) */
+.leaf.win .lf-name{padding:2px 6px 1px;margin:-2px -6px -1px;border-radius:3px;background:rgba(47,224,160,.15)}
+/* when the diagram comes on screen (crew.js marks it .go): the spokes run out from the hub and the names follow */
 @keyframes spDraw{from{stroke-dashoffset:1}}
 @keyframes spLeaf{from{opacity:0}}
 .spider:not(.go) .spoke path:not(.trace){stroke-dashoffset:1}
-.spider:not(.go) .leaf,.spider:not(.go) .sp-node{opacity:0}
+.spider:not(.go) .leaf,.spider:not(.go) .sp-node,.spider:not(.go) .sp-head{opacity:0}
 .spider.go .spoke path:not(.trace){animation:spDraw .6s var(--ease-io) backwards}
 .spider.go .spoke .rail{animation-delay:.3s}
 .spider.go .spoke .stub{animation-delay:.55s}
+.spider.go .sp-head{animation:spLeaf .5s var(--ease) backwards;animation-delay:.6s}
 .spider.go .leaf{animation:spLeaf .5s var(--ease) backwards;animation-delay:calc(.7s + var(--i,0) * 40ms)}
 .spider.go .sp-node{animation:spLeaf .4s var(--ease) backwards}
 html.still .spider *{animation:none !important;transition:none !important}
@@ -1155,6 +1170,7 @@ html.still .spider *{animation:none !important;transition:none !important}
 .dv.hide{display:none}
 .dv-head{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 17%,transparent),transparent 62%)}
 .dv-head i{width:4px;height:26px;border-radius:2px;background:var(--c);flex:none}
+.dv-head .em-mark{width:12px;height:12px;color:var(--c)}
 .dv-head h3{font:400 1.25rem/1 var(--disp);text-transform:uppercase;letter-spacing:.02em}
 .dv-head .n{margin-left:auto;font:500 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--c);border:1px solid var(--c);border-radius:999px;padding:6px 10px;white-space:nowrap}
 .dv-ppl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,236px),1fr));gap:12px;padding:16px 18px 18px}
@@ -1226,14 +1242,12 @@ html.still .spider *{animation:none !important;transition:none !important}
 /* a phone: the staff matrix. The founder as a hub ringed by a circle for each division, then each division as a list
    that opens. Wide screens keep the three views above. */
 .tm{display:none}
-.tm-guide{margin-top:16px;padding:14px 16px 12px;border:1px solid var(--line2);border-radius:12px}
-.tm-guide .h{display:block;text-align:center;margin-bottom:9px;font:500 10px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--fg3)}
-.tm-guide .row{display:flex;align-items:center;gap:11px;padding:5px 0;color:var(--fg2);font-size:.84rem}
-.tm-guide .row b{text-decoration:underline;text-underline-offset:3px}
-.tm-guide .row.a .sg-ic{color:var(--o-pink)}
-.tm-guide .row.b .sg-ic{color:var(--o-blue)}
-.tm-guide .sg-node{width:15px;height:15px;margin-inline:1px}
-.tm-hub{position:relative;max-width:430px;margin:16px auto 0}
+.tm-guide{margin-top:18px;text-align:center;font:400 .8rem/1.5 var(--sans);color:var(--fg3)}
+.tm-guide b{color:var(--fg2);font-weight:600}
+.tm-guide i{font-style:normal;margin:0 .6em}
+.tm-key{justify-content:center;gap:9px 16px;margin-top:18px;font-size:9.5px}
+.tm-key .k-lead{flex-basis:100%;text-align:center;margin:0}
+.tm-hub{position:relative;max-width:430px;margin:12px auto 0}
 .tm-hub::after{content:"";display:block;padding-top:calc(340 / 390 * 100%)}
 .tm-hub > svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .tm-orbit{fill:none;stroke:var(--line2);stroke-width:1;stroke-dasharray:4 8}
@@ -1261,14 +1275,19 @@ html.still .spider *{animation:none !important;transition:none !important}
 .tm-div.open .tm-dhead .chev{transform:rotate(-135deg);margin-top:5px}
 .tm-dbody{display:none;border-top:1px solid var(--line)}
 .tm-div.open .tm-dbody{display:block}
-.tm-person{display:flex;align-items:center;gap:10px;width:100%;min-height:54px;padding:9px 15px;border-top:1px solid var(--line);text-align:left}
+/* a person: the face, the name over the role (with the mark of the type), and a chevron that turns as they open */
+.tm-person{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 15px;border-top:1px solid var(--line);text-align:left}
 .tm-person:first-child{border-top:0}
-.tm-person .face{--s:34px}
-.tm-person b{flex:0 0 31%;font:600 .8rem/1.25 var(--sans);overflow-wrap:anywhere}
-.tm-person .r{flex:1;min-width:0;color:var(--fg2);font-size:.72rem;line-height:1.3}
-.tm-person .t{flex:none;max-width:27%;color:var(--fg3);font:500 8.5px/1.4 var(--mono);letter-spacing:.04em;text-transform:uppercase;text-align:right}
-.tm-person .t.win{color:var(--o-mint)}
-.tm-bio{display:none;padding:2px 15px 14px 59px}
+.tm-person .face{--s:36px}
+.tm-person .tx{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.tm-person b{display:flex;align-items:center;gap:6px;font:600 .9rem/1.2 var(--sans)}
+.tm-person b .star{font:normal 400 .7rem/1 var(--sans);color:var(--pink)}
+.tm-person.win b{padding:2px 6px 1px;margin:-2px -6px -1px;border-radius:3px;background:rgba(47,224,160,.15)}
+.tm-person .r{display:flex;align-items:center;gap:7px;color:var(--fg2);font:400 9.5px/1.35 var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.tm-person .r .em-mark{color:var(--fg)}
+.tm-person .chev{flex:none;width:7px;height:7px;border-right:1.5px solid var(--fg3);border-bottom:1.5px solid var(--fg3);transform:rotate(45deg);margin:-4px 2px 0;transition:transform .25s var(--ease)}
+.tm-person[aria-expanded="true"] .chev{transform:rotate(-135deg);margin-top:3px}
+.tm-bio{display:none;padding:2px 15px 16px 63px}
 .tm-bio.show{display:flow-root;animation:fadeUp .3s var(--ease)}
 .tm-bio .av{float:right;width:66px;margin:2px 0 8px 12px;font-size:1.2rem}
 .tm-bio p{font-size:.8rem;line-height:1.55;color:var(--fg2)}
@@ -1282,7 +1301,7 @@ html.still .spider *{animation:none !important;transition:none !important}
 .tm-dir .rl{display:block;color:var(--pink);font:500 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;margin-top:5px}
 .tm-dir p{margin-top:11px;color:var(--fg2);font-size:.8rem;line-height:1.55}
 
-@media (max-width:1239px){.sp-hint{display:block}.sp-guide{border-radius:14px}}
+@media (max-width:1239px){.sp-hint{display:block}}
 @media (max-width:899px){
   /* the phone layout owns the order: heading, chips, the hub and lists, headcount, the pipeline, the photograph */
   #crew{padding-block:calc(min(9vw,120px) * .58 + 34px)}
