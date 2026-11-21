@@ -3,9 +3,11 @@
    matrix, the line to 2036, the 2036 mix, how the mix shifts, and the flywheel. Colour follows the channel everywhere,
    in the earlier portfolio's colours and order; the two direct channels are hatched and tagged "direct" wherever they
    are listed, and every figure also names its channels in a legend, a tooltip and the matrix, never by colour alone.
-   A small rocket (the rail's own) flies the two lines in as they are first seen and parks at the last point. */
+   The site's one rocket (the courier, js/courier.js) flies the two lines in as they are scrolled through and parks at
+   the last point: each line is handed to it in RIDES (its shape, and a way to show it drawn so far), and so are the
+   tops of the plan's columns and the flywheel's stops. Without the courier a line draws itself in once it is seen. */
 import { $, $$, el, svg, clamp, lerp, easeOut, easeInOut, fmtCompact, fmtGBP, onSeen, STILL } from './kit.js';
-import { rocketArt, ART } from './courier.js';
+import { RIDES, lineAt } from './courier.js';
 
 /* fixed order and colour for every channel: six marketplaces, then the two direct channels */
 export const CHANNELS = [
@@ -58,19 +60,22 @@ function curve(p, t, a = 0, b = p.length - 1) {
   for (let i = a; i < b; i++) { const h = (p[i + 1].x - p[i].x) / 3; d += `C${(p[i].x + h).toFixed(1)} ${(p[i].y + t[i] * h).toFixed(1)} ${(p[i + 1].x - h).toFixed(1)} ${(p[i + 1].y - t[i + 1] * h).toFixed(1)} ${p[i + 1].x.toFixed(1)} ${p[i + 1].y.toFixed(1)}`; }
   return d;
 }
-/* where a path is a given distance along it, and which way it is heading there */
-function along(path, len, total) {
-  const p = path.getPointAtLength(clamp(len, 0, total)), a = clamp(len - 6, 0, Math.max(0, total - 12)), p0 = path.getPointAtLength(a), p1 = path.getPointAtLength(Math.min(total, a + 12));
-  return { x: p.x, y: p.y, deg: Math.atan2(p1.y - p0.y, p1.x - p0.x) * 180 / Math.PI };
+/* the same curve as points a few px apart, and how far along each one is: what the courier flies, with no path to ask */
+function sample(p, t) {
+  const xs = [p[0].x], ys = [p[0].y];
+  for (let i = 0; i < p.length - 1; i++) {
+    const a = p[i], b = p[i + 1], h = (b.x - a.x) / 3, c1x = a.x + h, c1y = a.y + t[i] * h, c2x = b.x - h, c2y = b.y - t[i + 1] * h, n = Math.max(4, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 4));
+    for (let k = 1; k <= n; k++) { const u = k / n, v = 1 - u; xs.push(v * v * v * a.x + 3 * v * v * u * c1x + 3 * v * u * u * c2x + u * u * u * b.x); ys.push(v * v * v * a.y + 3 * v * v * u * c1y + 3 * v * u * u * c2y + u * u * u * b.y); }
+  }
+  const cum = [0]; for (let i = 1; i < xs.length; i++) cum.push(cum[i - 1] + Math.hypot(xs[i] - xs[i - 1], ys[i] - ys[i - 1]));
+  return { xs, ys, cum, len: cum[cum.length - 1] || 1 };
 }
-/* the site's one rocket (js/courier.js: the courier, and the handle on the progress rail), set down on a chart: the
-   tip of its flame sits `gap` px ahead of (x, y) and its nose points along `deg`. Parked, the flame is out, so the gap
-   is taken back by the flame's length (6.6 px for each unit of `s`) and the body stands just past the last point.
-   RK sets the drawing to the size the charts' rocket has always been: 19.5 px of body for each unit of `s`. */
-const RK = 19.5 / ART.len;
-function rocket(parent) {
-  const g = svg('g', { class: 'rk', 'aria-hidden': 'true' }, parent); rocketArt(g);
-  return { at(x, y, deg, s, gap) { const k = s * RK; g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(deg + 90).toFixed(1)}) scale(${k.toFixed(4)}) translate(0 ${(-ART.len - ART.tail - gap / k).toFixed(2)})`); }, burn(on) { g.classList.toggle('burn', on); } };
+/* a line handed to the courier: k of it is shown drawn (go), from the first point (k = 0) to the last (k = 1). Until the
+   courier says otherwise it is shown as the page left it; with no courier at all it draws itself in once it is seen */
+function ride(id, fig, go) {
+  const r = RIDES[id] = { svg: null, line: null, k: -1, go(k) { k = clamp(k); if (Math.abs(k - r.k) < 1e-4) return; r.k = k; go(k); } };
+  if (!STILL) onSeen(fig, () => { if (!RIDES.live) tween(2000, k => r.go(easeInOut(k))); });
+  return r;
 }
 
 /* one tooltip per figure. show(x, y, { head, sub, rows, note }): rows are { name, value, c, direct, tag }: direct hatches
@@ -102,12 +107,12 @@ function inspect(node, show, hide) {
 function legend(items) { return el('ul.legend', null, items.map(i => el('li' + (i.direct ? '.direct' : '') + (i.cls ? '.' + i.cls : ''), { style: '--c:' + i.c }, el('i'), i.name))); }
 const kind = () => el('small.kind', { title: DIRECT_NOTE, text: 'direct' });
 
-/* ───────── 03 · revenue by year: the rising line, and the rocket that flies it in ───────── */
+/* ───────── 03 · revenue by year: the rising line, which the courier flies in ───────── */
 function revenue(DATA) {
-  const fig = $('#revChart'); if (!fig) return; const tip = tipOf(fig), D = DATA.revenue, n = D.length; let W = 0, entered = STILL, stop = null;
-  const dotC = [O_PINK, O_BLUE, O_MINT];
-  function draw(play) {
-    if (stop) stop(); stop = null; tip.hide(); $$('svg', fig).forEach(s => s.remove());
+  const fig = $('#revChart'); if (!fig) return; const tip = tipOf(fig), D = DATA.revenue, n = D.length; let W = 0, set = () => {};
+  const dotC = [O_PINK, O_BLUE, O_MINT], rd = ride('rev', fig, k => set(k));
+  function draw() {
+    tip.hide(); $$('svg', fig).forEach(s => s.remove());
     const w = W, small = w < 560, L = small ? 46 : 62, R = small ? 46 : 76, T = small ? 50 : 54, B = 38, H = Math.round(clamp(w * 0.4, 290, 460)), ih = H - T - B, base = T + ih, x0 = L + (small ? 18 : 34), x1 = w - R, max = 1200000;
     const X = i => x0 + (x1 - x0) * i / (n - 1), Y = v => base - ih * v / max;
     const s = svg('svg', { viewBox: `0 0 ${w} ${H}`, width: w, height: H, role: 'presentation' }); fig.prepend(s);
@@ -127,12 +132,11 @@ function revenue(DATA) {
       svg('text', { x: last ? pts[i].x - 8 : pts[i].x, y: pts[i].y - 19, 'text-anchor': last ? 'end' : 'middle', class: 'val' }, g, fmtCompact(r.value));
       g.addEventListener('focus', () => at(i)); g.addEventListener('blur', off); return g;
     });
-    const rk = rocket(s), size = small ? 1.45 : 1.9;
-    /* k of the line is drawn: the rocket is at its head, the wash follows underneath, each point lands as it is passed */
-    const set = k => {
-      line.style.strokeDasharray = len.toFixed(1); line.style.strokeDashoffset = (len * (1 - k)).toFixed(1);
-      const a = along(line, len * k, len); rk.at(a.x, a.y, a.deg, size, k >= 1 ? 14 - 6.6 * size : 3); veil.setAttribute('width', Math.max(0, a.x).toFixed(1));
-      marks.forEach((g, i) => g.classList.toggle('in', a.x >= pts[i].x - 0.5));
+    /* k of the line is drawn: the courier is at its head, the wash follows underneath, each point lands as it is passed */
+    const S = sample(pts, slopes(pts)), P = {}; line.style.strokeDasharray = len.toFixed(1);
+    set = k => {
+      line.style.strokeDashoffset = (len * (1 - k)).toFixed(1); lineAt(S, S.len * k, P); veil.setAttribute('width', k >= 1 ? w : Math.max(0, P.x).toFixed(1));
+      marks.forEach((g, i) => g.classList.toggle('in', k >= 1 || P.x >= pts[i].x - 0.5));
     };
     function at(i, e) {
       const r = D[i], bx = fig.getBoundingClientRect(); cross.setAttribute('x1', pts[i].x); cross.setAttribute('x2', pts[i].x); cross.style.opacity = 1; marks.forEach((g, k) => g.classList.toggle('on', k === i));
@@ -142,10 +146,9 @@ function revenue(DATA) {
     function off() { cross.style.opacity = 0; marks.forEach(g => g.classList.remove('on')); tip.hide(); }
     const hit = svg('rect', { x: L, y: T - 30, width: w - L, height: ih + 30 + B, fill: 'transparent' }, s);
     inspect(hit, e => { const bx = s.getBoundingClientRect(), mx = (e.clientX - bx.left) * (w / bx.width); let best = 0; pts.forEach((p, i) => { if (Math.abs(p.x - mx) < Math.abs(pts[best].x - mx)) best = i; }); at(best, e); }, off);
-    if (play && !STILL) { set(0); rk.burn(true); stop = tween(2000, k => set(easeInOut(k)), () => { rk.burn(false); stop = null; }); } else set(entered ? 1 : 0);
+    rd.svg = s; rd.line = S; const was = rd.k; rd.k = -1; rd.go(STILL ? 1 : Math.max(0, was));
   }
-  sized(fig, w => { W = w; draw(false); });
-  if (!STILL) onSeen(fig, () => { entered = true; draw(true); });
+  sized(fig, w => { W = w; draw(); });
 }
 
 /* ───────── 04 · three nested markets, each on its own timeline ─────────
@@ -257,6 +260,7 @@ function plan(DATA) {
       return { g, cx, bars, cap, yr };
     });
     G = { w, h, L, R, T, ih, band, small, axis, cols, base: T + ih, t: null };
+    RIDES.plan = { svg: s, cx: cols.map(c => c.cx), cy: capY, band, T };      /* the courier rides over the tops of the columns: where each year's total stands, as it moves */
   }
   /* where every bar goes for the view and the channels switched on */
   function target() {
@@ -325,7 +329,7 @@ function plan(DATA) {
 function trajectory(DATA) {
   const fig = $('#trajChart'); if (!fig) return; const D = DATA.trajectory, tip = tipOf(fig), n = D.length, iA = D.reduce((a, d, i) => d.kind === 'actual' ? i : a, 0);
   const peak = Math.max(...D.map(d => d.value)), LIN = peak * 1.045, LO = Math.log10(20000), HI = Math.log10(peak * 1.3), named = [D[iA].year, 2031, D[n - 1].year];
-  let scale = 'linear', W = 0, G = null, ys = null, stop = null, entered = STILL;
+  let scale = 'linear', W = 0, G = null, ys = null, stop = null; const P = {}, rd = ride('traj', fig, k => show(k));
   $('#trajScale').after(el('ul.legend', null, el('li.ln', { style: '--c:' + O_BLUE }, el('i'), 'Actual'), el('li.ln.dash', { style: '--c:' + O_MINT }, el('i'), 'Target')));
   $$('#trajScale button').forEach(b => b.addEventListener('click', () => { if (scale === b.dataset.scale) return; scale = b.dataset.scale; $$('#trajScale button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); morph(); }));
   const yOf = (v, g) => scale === 'log' ? g.base - g.ih * (Math.log10(Math.max(v, 20000)) - LO) / (HI - LO) : g.base - g.ih * v / LIN;
@@ -346,7 +350,6 @@ function trajectory(DATA) {
       if (named.includes(d.year) && !(small && i === iA)) svg('text', { x: i === iA ? 0 : -12, y: i === iA ? -16 : -10, 'text-anchor': i === iA ? 'middle' : 'end', class: 'val' }, g, fmtCompact(d.value));
       g.addEventListener('focus', () => at(i)); g.addEventListener('blur', off); return g;
     });
-    const rk = rocket(s);
     function at(i, e) {
       const d = D[i], p = G.pts[i], bx = fig.getBoundingClientRect(); cross.setAttribute('x1', p.x); cross.setAttribute('x2', p.x); cross.style.opacity = 1; marks.forEach((g, k) => g.classList.toggle('on', k === i));
       tip.show(e ? e.clientX : bx.left + p.x, e ? e.clientY : bx.top + p.y - 12, { head: String(d.year), sub: d.kind, rows: [{ name: 'Revenue', value: fmtCompact(d.value), c: d.kind === 'actual' ? O_BLUE : O_MINT }], note: d.note || null });
@@ -354,7 +357,7 @@ function trajectory(DATA) {
     function off() { cross.style.opacity = 0; marks.forEach(g => g.classList.remove('on')); tip.hide(); }
     const hit = svg('rect', { x: L, y: T - 30, width: w - L, height: ih + 30 + B, fill: 'transparent' }, s);
     inspect(hit, e => { const bx = s.getBoundingClientRect(), mx = (e.clientX - bx.left) * (w / bx.width); let best = 0; G.pts.forEach((p, i) => { if (Math.abs(p.x - mx) < Math.abs(G.pts[best].x - mx)) best = i; }); at(best, e); }, off);
-    G = { w, H, L, T, ih, base, x1, X, small, grid, veil, area, dashed, solid, full, marks, rk, size: small ? 1.45 : 1.9, pts: [], len: 0 };
+    G = { s, w, H, L, T, ih, base, x1, X, small, grid, veil, area, dashed, solid, full, marks, pts: [], S: null };
   }
   function axes() {
     const g = G; g.grid.replaceChildren();
@@ -362,18 +365,21 @@ function trajectory(DATA) {
     ticks.forEach(v => { const y = yOf(v, g); svg('line', { x1: g.L, x2: g.x1, y1: y, y2: y, class: v ? 'ax' : 'ax ax0' }, g.grid); svg('text', { x: g.L - 10, y: y + 4, 'text-anchor': 'end' }, g.grid, v ? fmtCompact(v) : '£0'); });
     if (scale === 'log') { svg('line', { x1: g.L, x2: g.x1, y1: g.base, y2: g.base, class: 'ax ax0' }, g.grid); svg('text', { x: g.L + 2, y: g.T - 16, class: 'axn' }, g.grid, 'log scale'); }
   }
-  /* the line through these heights; k of it shown, the rocket at its head (parked just past the last point at k = 1) */
-  function paint(y, k) {
+  /* the line through these heights (the courier flies the same curve, from G.S), shown as far as it has been drawn */
+  function paint(y) {
     const g = G, pts = D.map((d, i) => ({ x: g.X(d.year), y: y[i] })), t = slopes(pts), d = curve(pts, t); g.pts = pts;
     g.full.setAttribute('d', d); g.solid.setAttribute('d', curve(pts, t, 0, iA)); g.dashed.setAttribute('d', curve(pts, t, iA)); g.area.setAttribute('d', d + `L${pts[n - 1].x.toFixed(1)} ${g.base}L${pts[0].x.toFixed(1)} ${g.base}Z`);
-    const len = g.full.getTotalLength(), a = along(g.full, len * k, len); g.rk.at(a.x, a.y, a.deg, g.size, k >= 1 ? 14 - 6.6 * g.size : 3); g.veil.setAttribute('width', k >= 1 ? g.w : Math.max(0, a.x).toFixed(1));
-    g.marks.forEach((m, i) => { m.setAttribute('transform', `translate(${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)})`); m.classList.toggle('in', k >= 1 || a.x >= pts[i].x - 0.5); });
+    g.marks.forEach((m, i) => m.setAttribute('transform', `translate(${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)})`));
+    g.S = rd.line = sample(pts, t); rd.svg = g.s; show(rd.k < 0 ? (STILL ? 1 : 0) : rd.k);
+  }
+  /* k of the line drawn: the courier at its head, each point landing as it is passed */
+  function show(k) {
+    const g = G; if (!g || !g.S) return; lineAt(g.S, g.S.len * k, P); g.veil.setAttribute('width', k >= 1 ? g.w : Math.max(0, P.x).toFixed(1));
+    g.marks.forEach((m, i) => m.classList.toggle('in', k >= 1 || P.x >= g.pts[i].x - 0.5));
   }
   const heights = () => D.map(d => yOf(d.value, G));
-  function morph() { const from = ys.slice(), to = heights(); axes(); if (stop) stop(); G.rk.burn(false); stop = tween(520, k => { const e = easeInOut(k); ys = from.map((f, i) => lerp(f, to[i], e)); paint(ys, 1); }, () => { stop = null; }); }
-  function fly() { ys = heights(); G.rk.burn(true); stop = tween(2600, k => paint(ys, easeInOut(k)), () => { G.rk.burn(false); stop = null; }); }
-  sized(fig, w => { W = w; build(); axes(); ys = heights(); paint(ys, entered ? 1 : 0); });
-  if (!STILL) onSeen(fig, () => { entered = true; if (stop) stop(); fly(); });
+  function morph() { const from = ys.slice(), to = heights(); axes(); if (stop) stop(); stop = tween(520, k => { const e = easeInOut(k); ys = from.map((f, i) => lerp(f, to[i], e)); paint(ys); }, () => { stop = null; }); }
+  sized(fig, w => { W = w; build(); axes(); ys = heights(); paint(ys); });
 }
 
 function mix2036(DATA) {
@@ -425,6 +431,8 @@ function flywheel() {
     big.textContent = two(i); said.forEach((t, k) => { t.textContent = lines[i][k] || ''; }); arc.style.transform = `rotate(${-90 + (turn - 1) * 360 / n}deg)`;
   }
   steps.forEach((li, i) => li.addEventListener('pointerenter', () => { set(i); hold = performance.now(); }));
+  /* the courier rides round the ring: each stop it passes is the step the story is on, and the wheel waits while it rides */
+  RIDES.fly = { svg: s, size: S, r: R, n, at(i) { set(((i % n) + n) % n); hold = performance.now(); } };
   set(0);
   if (STILL) { steps.forEach(li => li.classList.add('on')); return; }
   const tick = () => { if (performance.now() - hold > 5000) set((cur + 1) % n); };
