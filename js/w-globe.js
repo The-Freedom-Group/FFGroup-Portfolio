@@ -4,10 +4,12 @@
    distance from Bury as the globe turns east to face them. At the end the glass clears, the rim is left as a ring, and
    the ring opens out and is gone, leaving the night sky the growth plan stands in.
    Everything here is a function of how far through the scene the scroll is, so it runs the same forwards and backwards.
-   It never uses the Earth's photograph, clouds or city lights: only the water map, as a clean cut-out.
+   It never uses the Earth's clouds or city lights: the water map cuts land from sea, and the land takes its relief and tone
+   from the height and day maps the planets use.
    Drawn over the night sky (w-orbit) once the sheet has gone; on its own while the sheet is up. */
 import * as THREE from 'three';
 import { mapTex } from './planets.js';
+import { GLSL_PERTURB } from './util.js';
 
 const DEG = Math.PI / 180;
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -62,10 +64,10 @@ const PORCELAIN = [244 / 255, 241 / 255, 235 / 255], NIGHT = [5 / 255, 5 / 255, 
 const SHEET_VS = `void main(){ gl_Position = vec4(position.xy, 0.0, 1.0); }`;
 const SHEET_FS = `uniform vec3 col; uniform float a; void main(){ gl_FragColor = vec4(col * a, a); }`;
 
-const GLOBE_VS = `varying vec2 vUv; varying vec3 vN; varying vec3 vNv; varying vec3 vW;
-void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vNv = normalize(normalMatrix * normal); gl_Position = projectionMatrix * viewMatrix * w; }`;
-const GLOBE_FS = `varying vec2 vUv; varying vec3 vN; varying vec3 vNv; varying vec3 vW;
-uniform sampler2D water; uniform float dusk; uniform float body;` + UNGRADE + `
+const GLOBE_VS = `varying vec2 vUv; varying vec3 vN; varying vec3 vNv; varying vec3 vW; varying vec3 vVp;
+void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vNv = normalize(normalMatrix * normal); vec4 v = viewMatrix * w; vVp = v.xyz; gl_Position = projectionMatrix * v; }`;
+const GLOBE_FS = `varying vec2 vUv; varying vec3 vN; varying vec3 vNv; varying vec3 vW; varying vec3 vVp;
+uniform sampler2D water; uniform sampler2D dayMap; uniform sampler2D normalMap; uniform float dusk; uniform float body;` + UNGRADE + GLSL_PERTURB + `
 void main(){
   vec3 N = normalize(vN); vec3 Nv = normalize(vNv); vec3 V = normalize(cameraPosition - vW);
   float edge = 1.0 - clamp(dot(N, V), 0.0, 1.0);                       // 0 in the middle of the disc, 1 on the limb
@@ -78,7 +80,10 @@ void main(){
   vec3 sea = mix(vec3(0.647, 0.047, 0.353), vec3(1.0, 0.176, 0.553), lit);          // #A50C5A in the shade to the brand's #FF2D8D in the light
   sea = mix(sea, vec3(1.0, 0.31, 0.635), pow(lit, 6.0) * 0.35);                      // a little lighter where the light lands
   sea = mix(sea, vec3(0.5, 0.02, 0.26), shade * 0.42);
-  vec3 ground = mix(vec3(0.9, 0.77, 0.845), vec3(1.0, 0.988, 0.972), lit);
+  /* the land has its real relief: the planets' height map turned into light and shade, and the ground's own tone */
+  vec3 Lg = normalize(vec3(-0.42, 0.46, 0.78)); vec3 Np = perturbN(Nv, texture2D(normalMap, vUv).xyz * 2.0 - 1.0, vVp, vUv, 1.1);
+  float relief = clamp(dot(Np, Lg) - dot(Nv, Lg), -0.45, 0.45), tone = dot(texture2D(dayMap, vUv).rgb, vec3(0.299, 0.587, 0.114));
+  vec3 ground = mix(vec3(0.9, 0.77, 0.845), vec3(1.0, 0.988, 0.972), lit) * (0.9 + 0.2 * tone) * (1.0 + relief * 0.95);
   vec3 day = mix(sea, ground, land) * (1.0 - 0.3 * pow(edge, 2.4));                  // deeper toward the limb
   day += vec3(1.0, 0.82, 0.9) * pow(edge, 6.0) * 0.1;                                // a thin haze of air inside the limb
   // the soft window of light, upper left, that the logo's globe carries
@@ -137,7 +142,7 @@ export function createGlobe({ renderer, small, grade }) {
 
   /* the globe: tipped, then turned about its own axis */
   const tip = new THREE.Group(), spin = new THREE.Group(); tip.rotation.x = TILT; tip.add(spin); scene.add(tip);
-  const globeU = { water: { value: mapTex('earth-spec', { colour: false }) }, dusk: { value: 0 }, body: { value: 1 } };
+  const globeU = { water: { value: mapTex('earth-spec', { colour: false }) }, dayMap: { value: mapTex('earth-day') }, normalMap: { value: mapTex('earth-normal', { colour: false }) }, dusk: { value: 0 }, body: { value: 1 } };
   const ball = new THREE.Mesh(new THREE.SphereGeometry(1, small ? 96 : 144, small ? 48 : 72), new THREE.ShaderMaterial({ uniforms: globeU, vertexShader: GLOBE_VS, fragmentShader: GLOBE_FS, transparent: true }));
   spin.add(ball);
 

@@ -27,7 +27,7 @@ const DIVE_LEAD = 0.675, DIVE_SPAN = 1.404;
    stroke thickens, the green body at 355.8 degrees, the blue at 155.2, the ember at 284.3 (radii 0.0519, 0.0414, 0.0247).
    The orbit lies flat in the plane of the first screen, so head on it is the logo's ellipse exactly. */
 const MK = { cx: 0.4652, cy: 0.5042, a: 0.5456, b: 0.2496, lean: 54.42 * DEG, gx: 0.7573, gy: 0.5073 }, KY = MK.b / MK.a;
-const BODIES = [{ at: 355.8, r: 0.0519, c: 0x16c98d, e: 0x063d2a }, { at: 155.2, r: 0.0414, c: 0x1c9bff, e: 0x06305c }, { at: 284.3, r: 0.0247, c: 0xff4a1e, e: 0x5a1205 }];
+const BODIES = [{ at: 355.8, r: 0.0519, world: 'facilities' }, { at: 155.2, r: 0.0414, world: 'global' }, { at: 284.3, r: 0.0247, world: 'distribution' }];
 /* the stroke round the orbit, read off the artwork: [degrees, width in wordmark widths, how solid, colour]. It runs thick
    and deep from the green body past the globe to the blue, thin and pale from there, and breaks where it would cross the letters. */
 const STROKE = [[0, 0.026, 1, '#ff3ecc'], [12, 0.0262, 1, '#fe3ecc'], [30, 0.029, 1, '#f52eb7'], [42, 0.0306, 1, '#e5199b'], [54, 0.0328, 1, '#d2047d'], [66, 0.0336, 1, '#cc0074'], [84, 0.0336, 1, '#cc0074'], [96, 0.0322, 1, '#d30680'],
@@ -80,7 +80,9 @@ export function createOrbit({ renderer, small, dpr, spec }) {
   const well = new THREE.Mesh(new THREE.CircleGeometry(1, 96), wellMat); well.scale.set(1, KY, 1); well.renderOrder = 1; rig.add(well); ring.renderOrder = 2;
   /* and round Enterprise once it is a planet: a soft pink glow, behind it */
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: softDisc(128, [[0, 'rgba(255,61,154,.6)'], [0.42, 'rgba(255,61,154,.2)'], [1, 'rgba(255,61,154,0)']]), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 })); glow.visible = false; scene.add(glow);
-  const bodies = BODIES.map(b => { const m = new THREE.Mesh(new THREE.SphereGeometry(b.r / MK.a, 48, 32), new THREE.MeshStandardMaterial({ color: b.c, roughness: 0.3, metalness: 0.05, emissive: b.e, emissiveIntensity: 1.2 })); m.userData = b; rig.add(m); return m; });
+  /* the logo's three bodies are the three companies' own worlds, built as the system builds them (green Facilities, blue
+     Global, the small ember one Distribution), each drawn at the logo's size for it */
+  const bodies = BODIES.map(b => { const w = makeWorld(WORLDS[b.world], sunPos, { seg: small ? 48 : 96 }); w.group.userData = Object.assign({ k: b.r / MK.a / w.R }, b); rig.add(w.group); w.group.w = w; return w.group; });
 
   /* ───────── poses ───────── */
   const cur = { target: V(), dir: V(0, 0.42, 1).normalize(), dist: 700, ox: 0, oy: 0 }, want = { target: V(), dir: V(), dist: 700, ox: 0, oy: 0 };
@@ -174,7 +176,7 @@ export function createOrbit({ renderer, small, dpr, spec }) {
       ringMat.uniforms.k.value = rigK; ringMat.uniforms.charge.value = Math.min(1.6, bh * bh + rc * 0.7); wellMat.uniforms.k.value = Math.min(1, bh * 1.5) * rigK; well.visible = bh > 0.004; ring.geometry.setDrawRange(0, Math.floor(RING_N * clamp(intro) / 3) * 3);
       /* the three bodies leave the ring one after another and wind in to the middle, faster as they go */
       bodies.forEach((b, i) => { const u = b.userData, pb = clamp((bh - 0.06 - i * 0.07) / 0.62), f2 = pb * pb, th = (u.at + Math.sin(time * (0.21 + i * 0.07) + i * 2.1) * 1.3 - bh * (60 + i * 30) - f2 * 220) * DEG, rr = 1 - f2;
-        b.position.set(Math.cos(th) * rr, -Math.sin(th) * KY * rr, 0); const kk = clamp(introBodies * 3 - i) * rigK * (1 - f2); b.scale.setScalar(Math.max(0.0001, ease(kk)) / Math.max(0.05, ringS)); b.rotation.y += dt * 0.4; });
+        b.position.set(Math.cos(th) * rr, -Math.sin(th) * KY * rr, 0); const kk = clamp(introBodies * 3 - i) * rigK * (1 - f2); b.scale.setScalar(u.k * Math.max(0.0001, ease(kk)) / Math.max(0.05, ringS)); b.visible = kk > 0.002; b.w.update(dt, time); });
       rig.updateMatrixWorld();
     }
     /* the warp is the ring: inside it the light is dragged round and down into a dark mouth; the ring itself and the sky

@@ -49,9 +49,9 @@ void main(){
   float water = texture2D(specMap, vUv).r;
   if (pink > 0.5) {
     float lum = dot(albedo, vec3(0.299, 0.587, 0.114));
-    /* the logo's globe: a hot magenta sea (the artwork's is #E722A2) under white land */
-    vec3 sea = mix(vec3(0.52, 0.004, 0.215), vec3(0.37, 0.0, 0.14), smoothstep(0.0, 0.35, lum) * 0.7);
-    vec3 land = vec3(1.0, 0.985, 0.97) * (0.86 + 0.3 * lum);
+    /* the group's globe as thefreedomgroup.global paints it: a pink sea under pale land */
+    vec3 sea = mix(vec3(0.98, 0.22, 0.58), vec3(0.62, 0.04, 0.34), smoothstep(0.0, 0.35, lum) * 0.8);
+    vec3 land = vec3(0.97, 0.95, 0.92) * (0.72 + 0.4 * lum);
     albedo = mix(land, sea, smoothstep(0.3, 0.7, water)); city *= vec3(1.0, 0.75, 0.9) * 0.6;
   }
   float cl = texture2D(cloudMap, vec2(vUv.x + cloudOffset - 0.0015, vUv.y + 0.001)).r;
@@ -60,10 +60,10 @@ void main(){
   float diffuse = max(mix(nlg, nl, 1.0 - water * 0.8), 0.0);
   vec3 col = albedo * (vec3(0.010, 0.016, 0.030) + diffuse * 1.5) * shadow;
   vec3 H = normalize(L + V); float glint = pow(max(dot(Ng, H), 0.0), 110.0) * water * max(nlg, 0.0) * 0.8;
-  col += vec3(1.0, 0.85, 0.65) * glint * (pink > 0.5 ? 0.22 : 1.0);
+  col += vec3(1.0, 0.85, 0.65) * glint;
   col += city * vec3(1.0, 0.72, 0.40) * 2.4 * (1.0 - smoothstep(-0.2, 0.12, nlg));
   float rim = pow(1.0 - max(dot(Ng, V), 0.0), 3.4);
-  vec3 rimC = pink > 0.5 ? vec3(0.62, 0.05, 0.3) : vec3(0.06, 0.31, 0.65);
+  vec3 rimC = pink > 0.5 ? vec3(0.9, 0.2, 0.5) : vec3(0.06, 0.31, 0.65);
   col += rimC * rim * smoothstep(-0.45, 0.2, nlg) * 0.8;
   float sunset = exp(-abs(nlg) * 22.0) * rim; col += vec3(0.6, 0.3, 0.12) * sunset * 0.18;
   gl_FragColor = vec4(look(col), 1.0);` + OUT;
@@ -129,7 +129,7 @@ void main(){
   #ifndef LOW
   alb *= 1.0 + detail * (fbm(p * 60.0) - 0.5) * 0.3;
   #endif
-  if (hex > 0.5) { float e = hexEdge(vec2(vUv.x * 48.0, vUv.y * 24.0)); float line = smoothstep(0.07, 0.0, e) * (1.0 - pow(abs(vUv.y - 0.5) * 2.0, 5.0)); alb = mix(alb, vec3(0.75, 1.0, 0.88), line * 0.55); }
+  if (hex > 0.5) { float e = hexEdge(vec2(vUv.x * 48.0, vUv.y * 24.0)); float fw = fwidth(e); float line = smoothstep(0.07 + fw, 0.0, e) * (1.0 - smoothstep(0.05, 0.16, fw)) * (1.0 - pow(abs(vUv.y - 0.5) * 2.0, 5.0));   /* the cells fade out as they get too small to draw cleanly, instead of fizzing */ alb = mix(alb, vec3(0.75, 1.0, 0.88), line * 0.55); }
   float nl = dot(N, L); float nlg = dot(Ng, L);
   float diff = max(nl, 0.0) * smoothstep(-0.05, 0.12, nlg);
   float mu = max(dot(Ng, V), 0.0);
@@ -163,7 +163,8 @@ function skyShell(R, a, sunPos, seg, look) {
   const m = shaderMat(SKY_FS, { sunPos: { value: sunPos }, time: { value: 0 }, sat: look.sat, gain: look.gain, cDay: u3(a.day), cDusk: u3(a.dusk), strength: { value: a.strength }, centre: { value: new THREE.Vector3() }, R: { value: R * 0.995 }, Ra: { value: Ra }, falloff: { value: 5.5 } },
     { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide });
   const mesh = new THREE.Mesh(sphere(Ra, seg), m); mesh.renderOrder = 2;
-  mesh.onBeforeRender = () => { mesh.getWorldPosition(m.uniforms.centre.value); };
+  /* the air is worked out in world units, so a world drawn bigger or smaller than its own size keeps its air the right depth */
+  const ws = new THREE.Vector3(); mesh.onBeforeRender = () => { mesh.getWorldPosition(m.uniforms.centre.value); mesh.getWorldScale(ws); const k = (ws.x + ws.y + ws.z) / 3; m.uniforms.R.value = R * 0.995 * k; m.uniforms.Ra.value = Ra * k; };
   return mesh;
 }
 function ringGeometry(inner, outer, segs = 256) {
