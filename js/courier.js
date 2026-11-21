@@ -1,17 +1,21 @@
 /* The courier: the small rocket that travels the whole story. It is the launch rocket of the last part (w-pad.js: the
    porcelain body, the pink nose and bands, the two boosters) drawn once in two dimensions, and that one drawing is also
-   the handle on the progress rail and the rocket that leads the two chart lines.
+   the handle on the progress rail.
    The first screen has its own copy (sysmap.js), which falls into the hole; this one comes out of the new planet after
    the nova and circles it while the map builds. Once the system has built itself it patrols behind Enterprise,
    through the open sky under the heading and under the four figures; it goes into Freedom Global ahead of the dive, is
    seen falling through the cloud, and holds beside the investment focus; down the journey it is the head of the line
-   on the left; beside the figures, the plan, the team and Beyond it rests in a margin and crosses the page to the
-   other one now and then; it circles the expansion map's
-   globe, in front and then away behind it; it rounds the raise at dusk; and as the view comes down to the launch pad
-   it climbs out through the top of the screen on the very line the launch rocket then comes down.
-   The page moves a target along that route; the rocket chases it (it is never glued to the scroll), turns its nose
-   through its own heading, leans into turns, burns longer the faster it goes and bobs when it rests. If the target is
-   suddenly far away (a jump to another part) it leaves by the nearest edge and comes in again by another.
+   on the left. Then it flies on the figures themselves (legs, below): it draws the revenue line in, each year landing
+   as it passes, and parks on the last; crosses the page in the gap between two parts; rides the market's timelines;
+   circles the expansion map's globe, in front and then away behind it; climbs over the tops of the plan's columns and
+   rounds the year's breakdown; draws the line to 2036 in the same way; comes down into the team and circles its hub;
+   rounds the raise at dusk; rides round the flywheel, each step lighting as it passes; and as the view comes down to
+   the launch pad it climbs out through the top of the screen on the very line the launch rocket then comes down.
+   Between two of those it waits in a margin, never over the words. On a phone it flies the two lines only.
+   The page moves a target along that route (on the figures the scroll walks it, so scrolling back flies it backwards);
+   the rocket chases it (it is never glued to the scroll), turns its nose through its own heading, leans into turns,
+   burns longer the faster it goes and bobs when it rests. If the target is suddenly far away (a jump to another part)
+   it leaves by the nearest edge and comes in again by another.
    One layer over the page, nothing in it can be pressed; each frame writes one transform, and an opacity when it changes.
    Everything it steers by is measured from the page when the layout changes, never in the frame. */
 import { $, $$, el, svg, clamp, lerp, smooth, span, STILL } from './kit.js';
@@ -43,11 +47,21 @@ export function rocketArt(parent, { trail = false } = {}) {
   return flame;
 }
 
+/* the figures the courier flies on, handed over by charts.js: rev and traj, a line each ({ svg, line: { xs, ys, cum, len },
+   go(k) shows k of it drawn }); plan, the tops of the columns ({ svg, cx, cy, band }); fly, the flywheel ({ svg, size, r,
+   n, at(i) lights a step }). live: a courier is here to fly them (without one, a line draws itself in) */
+export const RIDES = { live: false };
+/* where a line of points ({ xs, ys, cum, len }) is, d along it */
+export function lineAt(L, d, o) {
+  const c = L.cum; d = clamp(d, 0, L.len); let lo = 0, hi = c.length - 1; while (lo + 1 < hi) { const m = (lo + hi) >> 1; if (c[m] <= d) lo = m; else hi = m; }
+  const u = (d - c[lo]) / Math.max(1e-4, c[hi] - c[lo]); o.x = lerp(L.xs[lo], L.xs[hi], clamp(u)); o.y = lerp(L.ys[lo], L.ys[hi], clamp(u)); return o;
+}
+
 /* ───────── the flight ───────── */
 const PI = Math.PI, TAU = PI * 2, DOWN = PI / 2, UP = -PI / 2;
 const wrap = a => { a = (a + PI) % TAU; return (a < 0 ? a + TAU : a) - PI; };
 const BODY = 96;                                                   // the length the courier is drawn at; it is only ever scaled down from this, so it stays sharp
-const MARGIN = ['traction', 'market', 'plan', 'horizon', 'crew', 'beyond'];   // the parts where it keeps to the left margin
+const MARGIN = ['traction', 'market', 'plan', 'horizon', 'crew', 'beyond'];   // the reading parts, each with a margin it can wait in
 
 /* a smooth line through points (Catmull-Rom), walked by distance. marks[i]: how far along the i-th point is */
 function track(pts, closed) {
@@ -61,7 +75,7 @@ function track(pts, closed) {
   marks.push(xs.length); xs.push(P(closed ? 0 : n - 1)[0]); ys.push(P(closed ? 0 : n - 1)[1]);
   const cum = [0]; for (let i = 1; i < xs.length; i++) cum.push(cum[i - 1] + Math.hypot(xs[i] - xs[i - 1], ys[i] - ys[i - 1]));
   const len = cum[cum.length - 1] || 1;
-  return { xs, ys, len, closed, marks: marks.map(i => cum[i]),
+  return { xs, ys, cum, len, closed, marks: marks.map(i => cum[i]),
     at(d, o) {
       d = closed ? ((d % len) + len) % len : clamp(d, 0, len); let lo = 0, hi = cum.length - 1; while (lo + 1 < hi) { const m = (lo + hi) >> 1; if (cum[m] <= d) lo = m; else hi = m; }
       const u = (d - cum[lo]) / Math.max(1e-4, cum[hi] - cum[lo]); o.x = lerp(xs[lo], xs[hi], u); o.y = lerp(ys[lo], ys[hi], u); return o;
@@ -77,18 +91,22 @@ function clear(tr, boxes, by) {
    mapSpan: the stretch of the map scene its nine territories share */
 export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
   const layer = el('div', { id: 'courier', 'aria-hidden': 'true' }), ship = el('div.cr'), pic = svg('svg', { viewBox: `${-ART.w / 2} -1 ${ART.w} ${ART.len + 2}`, class: 'rk' }, ship);
-  const flameEl = rocketArt(pic, { trail: true }); layer.append(ship); document.body.append(layer);
+  const flameEl = rocketArt(pic, { trail: true }); layer.append(ship); document.body.append(layer); RIDES.live = true;
   const canClip = !!(window.CSS && CSS.supports && CSS.supports('clip-path', 'path(evenodd, "M0 0H1V1Z")'));
   const A = byId.top, B = byId.system, F = byId.focus, J = byId.journey, M = byId.map, R = byId.raise, L = byId.liftoff;
 
   /* ───────── what it steers by: measured when the layout changes ───────── */
   let dirty = true, vw = 0, vh = 0, phone = false, railX = 1e5, navH = 64;
-  const gut = {}, jr = { ok: false, x: 0, top: 0, bottom: 0, shift: 0, len: 40 }, fo = { left: 0, ok: false }, rs = { ok: false }, lo = { ok: false }, yr = { w: 46, h: 20 };
+  const gut = {}, lanes = {}, jr = { ok: false, x: 0, top: 0, bottom: 0, shift: 0, len: 40 }, fo = { left: 0, ok: false }, rs = { ok: false }, lo = { ok: false }, yr = { w: 46, h: 20 };
   let sysRoute = null, sysKey = '', rsRoute = null;
   /* where a thing is on its scene's stage, whatever the page has moved it by since */
   const box = (e, stage) => { if (!e || !e.offsetParent) return null; let x = 0, y = 0, n = e; while (n && n !== stage) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; } return [x, y, x + e.offsetWidth, y + e.offsetHeight]; };
   const join = (...b) => { b = b.filter(Boolean); return b.length ? [Math.min(...b.map(v => v[0])), Math.min(...b.map(v => v[1])), Math.max(...b.map(v => v[2])), Math.max(...b.map(v => v[3]))] : null; };
   const room = w => clamp(w * 0.62, 30, 50);                       // how long it may be in a margin this wide
+  /* where a thing is on the page, whatever transform the page has on it for now (a figure still easing up into place) */
+  const docBox = e => { if (!e || !e.offsetParent) return null; let x = e.offsetLeft, y = e.offsetTop, n = e.offsetParent; while (n) { x += n.offsetLeft + n.clientLeft; y += n.offsetTop + n.clientTop; n = n.offsetParent; } return [x, y, x + e.offsetWidth, y + e.offsetHeight]; };
+  /* and a figure's drawing: where its (0, 0) is on the page, and how many px one of its units is */
+  const svgAt = s => { const f = s && s.parentElement, b = docBox(f); if (!b) return null; const a = s.getBoundingClientRect(), c = f.getBoundingClientRect(), vb = s.viewBox && s.viewBox.baseVal, k = vb && vb.width ? a.width / vb.width : 1; return [b[0] + a.left - c.left, b[1] + a.top - c.top, k]; };
   function measure() {
     dirty = false; vw = innerWidth; vh = innerHeight; phone = vw < 900; sysKey = ''; rsRoute = null;
     const rail = $('#rail'), rk = rail && $('.rk', rail); railX = rk && getComputedStyle(rail).display !== 'none' ? rk.getBoundingClientRect().left : 1e5;
@@ -98,7 +116,10 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
     MARGIN.forEach(id => { const w = $('.wrap', byId[id].sec), r = w && w.getBoundingClientRect(); let free = r ? r.left + parseFloat(getComputedStyle(w).paddingLeft) : 0, end = r ? r.right - parseFloat(getComputedStyle(w).paddingRight) : vw;
       if (id === 'crew') { const wide = $('.crew-wide', byId[id].sec); if (wide && wide.offsetParent) { const q = wide.getBoundingClientRect(), cs = getComputedStyle(wide); free = Math.min(free, q.left + parseFloat(cs.paddingLeft)); end = Math.max(end, q.right - parseFloat(cs.paddingRight)); } }   // the staff chart runs wider than the words
       const freeR = edgeR - end;
-      gut[id] = { ok: free >= 48, x: free / 2, len: room(free), rok: freeR >= 48, rx: end + freeR / 2, rlen: room(freeR) }; });
+      gut[id] = { ok: free >= 48, x: free / 2, len: room(free), rok: freeR >= 48, rx: end + freeR / 2, rlen: room(freeR) };
+      /* the lanes it waits in between two figures: beside the words themselves (the staff chart is flown round, not waited beside) */
+      const lf = r ? r.left + parseFloat(getComputedStyle(w).paddingLeft) : 0, le = r ? r.right - parseFloat(getComputedStyle(w).paddingRight) : vw, lr = edgeR - le;
+      lanes[id] = { ok: lf >= 48, x: lf / 2, len: room(lf), rok: lr >= 48, rx: le + lr / 2, rlen: room(lr) }; });
     /* the journey's line */
     const line = $('#jrLine'), j = $('#jr');
     if (line && j && getComputedStyle(line).display !== 'none') { const r = j.getBoundingClientRect(), x = line.getBoundingClientRect().left + 0.5; jr.ok = x >= 26; jr.x = x; jr.top = r.top + scrollY; jr.bottom = r.bottom + scrollY; jr.shift = Math.min(40, x * 0.5); jr.len = clamp(vh * 0.062, 40, 56); } else jr.ok = false;
@@ -109,6 +130,7 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
     /* liftoff: the words the rocket has to keep clear of on its way out */
     { const st = $('.stage', L.sec), t = join(box($('#loHead'), st), box($('#loClose'), st)); lo.ok = !!t; if (t) { lo.l = t[0]; lo.t = t[1]; lo.r = t[2]; lo.b = t[3]; } }
     { const y = $('#sysYears .yr'); if (y && y.offsetWidth) { yr.w = y.offsetWidth; yr.h = y.offsetHeight; } }
+    buildLegs();
   }
   const soil = () => { dirty = true; };
   addEventListener('resize', soil); if ('ResizeObserver' in window) new ResizeObserver(soil).observe($('#main'));
@@ -174,21 +196,12 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
   /* ───────── where it should be now ─────────
      T: where (x, y), how long (len), how visible (a), which way it faces at rest (face), how hard it follows (k),
      how much the scroll feeds its flame (thr), the disc it is behind (hide), a line it does not show above (cut).
-     show: this part of the story has the courier in it. dock: hidden where it stands, to be shown from there. */
-  const T = { show: false, x: 0, y: 0, len: 40, a: 1, face: null, k: 7, thr: 0, hide: null, cut: 0, dock: false, hard: false }, P = { x: 0, y: 0 }, hole = { x: 0, y: 0, r: 0 };
-  let dir = 1, lead = 0, sysOn = false, sysU = 0, orbitOn = false, preOn = false, pth = 0, curMid = 0, side = 0, th = PI, rsOn = false, rsD = 0, loOn = false, loE = 0, run = 0, lastS = 0, lastSy = 0, sv = 0;
-  const partAt = mid => { let id = MARGIN[0]; for (const m of MARGIN) if (mid >= byId[m].top) id = m; return id; };
-  /* the reading parts: it rests in a margin, and every so often (every screen and a bit of scroll) it crosses the page
-     to the other margin, on a long diagonal, nose first, with its trail out: the old site's rocket did the same. The
-     crossing is its own flight (the scroll only says which side it should be on), so it never stops over the words */
-  const CROSS = 1.15;
-  function margin(id) {
-    const g = gut[id]; if (!g || !g.ok) return false; T.show = true; T.face = dir > 0 ? DOWN : UP; T.thr = 0.55;
-    const u = (curMid - byId[id].top) / vh, want = g.rok ? ((Math.floor(u / CROSS) % 2) + 2) % 2 : 0;
-    side = want; const right = side === 1;
-    T.x = right ? g.rx : g.x; T.len = right ? g.rlen : g.len; T.y = vh * (right ? 0.36 : 0.62) + lead; T.k = 4; T.hard = true;     // k: a crossing takes about a second
-    return true;
-  }
+     show: this part of the story has the courier in it. dock: hidden where it stands, to be shown from there.
+     On the figures: pin, how far the target is fixed to the page (the rocket is carried with the page as it scrolls, so
+     it only chases what moves on the page); lock, it keeps facing along the figure even while the scroll walks it back;
+     lead, how far it is fed ahead of a target that is moving, so on a line it is at the line's head, not trailing it. */
+  const T = { show: false, x: 0, y: 0, len: 40, a: 1, face: null, k: 7, thr: 0, hide: null, cut: 0, dock: false, hard: false, pin: 0, lock: false, lead: 0 }, P = { x: 0, y: 0 }, hole = { x: 0, y: 0, r: 0 };
+  let dir = 1, lead = 0, sysOn = false, sysU = 0, orbitOn = false, preOn = false, pth = 0, th = PI, rsOn = false, rsD = 0, loOn = false, loE = 0, run = 0, lastS = 0, lastSy = 0, sv = 0;
   /* the journey: it is the head of the line's pink fill, which ends at the middle of the screen. Before the line has
      come up that far, and after it has gone, it waits a little to the left of it, clear of the headings */
   function onLine(sy, flat) {
@@ -197,10 +210,151 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
     if (flat) { T.x = jr.x; T.y = clamp(y, top, bot); T.show = T.y > navH + T.len && T.y < vh - T.len * 0.5; return; }   // parked: on the line, wherever its fill ends
     T.show = true; T.x = jr.x - jr.shift * off; T.y = y + lead * off;
   }
+
+  /* ───────── the reading parts: on the figures ─────────
+     From the traction to Beyond it flies on the page's own figures, one after another, each over its own stretch of the
+     scroll: a leg. A leg is a path, a chart's line or an orbit, fixed to the page, or a wait in a margin, fixed to the
+     screen; between two legs it draws across from the one to the other. The scroll walks a leg, so it flies backwards
+     when the page goes back; on a figure it keeps to its own pace (vmax), so a flick of the wheel never drags it.
+     a, b: the scroll over which the leg is flown; s0, s1: the stretch of that which walks it from end to end (before
+     it, it waits at the start, after it, at the end). Laid out with the layout; a chart's line is read as it is drawn. */
+  let legs = [], laid = [], fno = 0, fdt = 1 / 60, CL = 40; const RID = ['rev', 'traj', 'plan', 'fly']; const LA = {}, LB = {}, LO = {}, Q = { x: 0, y: 0 }, Q2 = { x: 0, y: 0 };
+  const headAt = (Ln, d) => { const e = Math.min(6, Ln.len / 2), d0 = clamp(d - e, 0, Math.max(0, Ln.len - 2 * e)); lineAt(Ln, d0, Q2); const x0 = Q2.x, y0 = Q2.y; lineAt(Ln, d0 + 2 * e, Q2); return Math.atan2(Q2.y - y0, Q2.x - x0); };
+  /* how far along a leg it is: where the scroll says (u), reached at the leg's own pace; straight there if it was not on it a moment ago */
+  function pace(Lg, u) {
+    if (Lg.seen === fno) return Lg.cur;
+    if (Lg.seen !== fno - 1 || !Lg.vmax) Lg.cur = u;
+    else { const m = Lg.vmax * fdt / Math.max(40, Lg.span()); Lg.cur += clamp((u - Lg.cur) * Math.min(1, fdt * 7), -m, m); }
+    Lg.seen = fno; return Lg.cur;
+  }
+  function evalLeg(Lg, s, o) {
+    o.show = true; o.pin = 1; o.face = null; o.lock = false; o.hide = null; o.len = Lg.len || CL; o.lead = 1; o.k = 12; o.thr = 0.25;
+    Lg.at(pace(Lg, Lg.s1 > Lg.s0 ? clamp((s - Lg.s0) / (Lg.s1 - Lg.s0)) : s >= Lg.s0 ? 1 : 0), o, s);
+  }
+  /* the legs, in order: sets T from the one the scroll is on, or from the two it is between. false: no courier here */
+  function reading(s) {
+    const n = legs.length; let i = 0; while (i < n && legs[i].b < s) i++;
+    let o = LO;
+    if (i < n && s >= legs[i].a) evalLeg(legs[i], s, o);
+    else {
+      const A = legs[i - 1], Bq = legs[i]; if (!A || !Bq || A.solo || Bq.solo) return false;
+      evalLeg(A, s, LA); evalLeg(Bq, s, LB); const w = smooth((s - A.b) / Math.max(1, Bq.a - A.b));
+      if (!LA.show || !LB.show) o = LA.show ? LA : LB.show ? LB : LA;          /* a side with no room for it: only the other side has a place */
+      else { o.show = true; o.x = lerp(LA.x, LB.x, w); o.y = lerp(LA.y, LB.y, w); o.len = lerp(LA.len, LB.len, w); o.pin = lerp(LA.pin, LB.pin, w); o.k = lerp(LA.k, LB.k, w); o.thr = lerp(LA.thr, LB.thr, w);
+        o.face = null; o.lock = false; o.hide = w < 0.5 ? LA.hide : LB.hide; o.lead = lerp(LA.lead, LB.lead, w) * 0.5; }
+    }
+    T.show = o.show; T.x = o.x; T.y = o.y; T.len = o.len; T.face = o.face; T.lock = o.lock; T.pin = o.pin; T.hide = o.hide; T.lead = o.lead; T.k = o.k; T.thr = o.thr; T.hard = true; T.a = 1;
+    return o.show;
+  }
+  /* no flight (still, or no world): it stands on a chart's line, at its head, wherever the scroll has drawn it to */
+  function flatRide(s) {
+    for (const Lg of legs) { if (!Lg.ride || s < Lg.s0 || s > Lg.b) continue;
+      evalLeg(Lg, s, LO); if (STILL) { Lg.cur = 1; Lg.at(1, LO, s); }
+      if (LO.y < navH + LO.len * 0.6 || LO.y > vh - LO.len * 0.6) return false;
+      T.show = true; T.x = LO.x; T.y = LO.y; T.len = LO.len; T.face = LO.face; return true; }
+    return false;
+  }
+
+  /* the kinds of leg */
+  const at = (Y, f) => Y - f * vh;                                   /* the scroll at which page height Y stands f of the way down the screen */
+  /* a wait in a part's margin (side 1: the right one), fixed to the screen; where there is no margin it has no place */
+  const lane = (id, side) => ({ lane: true, a: 0, b: 0, s0: 0, s1: 0, at(k, o) {
+    const g = lanes[id]; o.pin = 0; o.lead = 0; o.k = 5; o.thr = 0.55; o.face = dir > 0 ? DOWN : UP;
+    if (!g || !(side ? g.rok : g.ok)) { o.show = false; o.x = side ? vw + 80 : -80; o.y = vh * 0.5; return; }
+    o.x = side ? g.rx : g.x; o.len = side ? g.rlen : g.len; o.y = vh * (side ? 0.36 : 0.62) + lead; } });
+  /* along a line of points on the page, nose first */
+  const path = (pts, s0, s1, a = s0, b = s1) => { const tr = track(pts, false); return { a, b, s0, s1, vmax: 1300, span: () => tr.len, at(k, o, s) {
+    const d = k * tr.len; lineAt(tr, d, Q); o.x = Q.x; o.y = Q.y - s; o.face = headAt(tr, d); o.lock = true; } }; };
+  /* round an ellipse on the page: c.x, c.y its middle, c.rx, c.ry its size, from th0 for turns, clockwise or not;
+     behind the disc c.hide across its far half; c.stop is told the angle as it goes */
+  const orbit = (c, s0, s1, a = s0, b = s1) => { const hd = { x: 0, y: 0, r: c.hide || 0 }; return { a, b, s0, s1, vmax: 1500, span: () => c.turns * PI * (c.rx + c.ry), at(k, o, s) {
+    const sg = c.cw ? 1 : -1, t = c.th0 + sg * c.turns * TAU * k, cs = Math.cos(t), sn = Math.sin(t);
+    o.x = c.x + cs * c.rx; o.y = c.y + sn * c.ry - s; o.face = Math.atan2(cs * c.ry * sg, -sn * c.rx * sg); o.lock = true;
+    if (c.hide && sn < 0) { hd.x = c.x; hd.y = c.y - s; o.hide = hd; }
+    if (c.stop && k > 0 && k < 1) c.stop(t); } }; };
+  /* a chart's line, drawn in by the courier at its head: it waits low on the screen until the line's start comes up to it */
+  const rideOn = (id, solo) => { const R = RIDES[id], ps = R && R.line && svgAt(R.svg); if (!ps) return null; const [ox, oy, k0] = ps, Ln = R.line;
+    const sY = oy + Ln.ys[0] * k0, eY = oy + Ln.ys[Ln.ys.length - 1] * k0, s0 = at(sY, 0.86), s1 = Math.max(s0 + vh * 0.3, at(eY, 0.28));
+    return { ride: true, R, svg: R.svg, solo, a: s0 - vh * (solo ? 0.3 : 0.04), b: at(eY, 0.17), s0, s1, vmax: 1200, span: () => (R.line ? R.line.len : 1) * k0, at(k, o, s) {
+      const Lr = R.line; if (!Lr) { o.show = false; return; } R.go(k); const d = k * Lr.len, ang = headAt(Lr, d), off = o.len * 0.62 + 3; lineAt(Lr, d, Q);
+      o.x = ox + Q.x * k0 + Math.cos(ang) * off; o.y = oy + Q.y * k0 + Math.sin(ang) * off - s; o.face = ang; o.lock = true;
+      if (k <= 0 && o.y > vh * 0.86) { o.y = vh * 0.86; o.pin = 0; } } }; };
+
+  /* the whole flight, from the end of the journey to liftoff */
+  function buildLegs() {
+    legs = []; laid = RID.map(id => RIDES[id] && RIDES[id].svg); CL = phone ? 30 : clamp(vw * 0.027, 34, 46);
+    const rev = rideOn('rev', phone), traj = rideOn('traj', phone);
+    if (phone) { legs = [rev, traj].filter(Boolean); return; }       /* a phone: the two lines only; the reading parts have no margins to wait in */
+    const q = [], Tr = byId.traction, By = byId.beyond;
+    /* a crossing in the gap between two blocks, from one margin to the other, as the gap comes up the screen */
+    const seam = (y0, y1, idA, sideA, idB, sideB) => { const Y = (y0 + y1) / 2, ga = lanes[idA], gb = lanes[idB], xa = sideA ? (ga.rok ? ga.rx : vw - 20) : (ga.ok ? ga.x : 20), xb = sideB ? (gb.rok ? gb.rx : vw - 20) : (gb.ok ? gb.x : 20);
+      return path([[xa, Y], [lerp(xa, xb, 0.5), Y], [xb, Y]], at(Y, 0.66), at(Y, 0.4)); };
+    /* 02 → 03: from the head of the journey's line onto the revenue line, then up to the right margin */
+    const jb = Tr.top - vh * 0.5;
+    q.push({ a: -1e9, b: rev ? Math.min(jb, rev.a - vh * 0.15) : jb, s0: -1e9, s1: 0, at(k, o, s) { o.pin = 0; o.lead = 0; o.k = 11; o.thr = 0.6;
+      if (!jr.ok) { o.show = false; o.x = -80; o.y = vh * 0.5; return; } const top = jr.top - s, bot = jr.bottom - s, y = vh * 0.5, off = top > y ? smooth((top - y) / 80) : bot < y ? smooth((y - bot) / 80) : 0;
+      o.len = jr.len; o.face = dir > 0 ? DOWN : UP; o.x = jr.x - jr.shift * off; o.y = y + lead * off; } });
+    if (rev) q.push(rev);
+    q.push(lane('traction', 1));
+    /* 03 → 04: across the gap under the four pillars */
+    { const p = docBox($('#traction .pillars')), h = docBox($('#market .sh')); if (p && h) q.push(seam(p[3], h[1], 'traction', 1, 'market', 0)); }
+    q.push(lane('market', 0));
+    /* 04: along the first timeline, down between it and its figures, back along the second, and out to the margin */
+    { const sl = $$('.mkp .runway-slider').map(docBox), pn = $$('.mkp').map(docBox), ro = $$('.mkp .readouts').map(docBox);
+      if (sl[0] && sl[1] && pn[1] && ro[0]) { const r1 = sl[0], r2 = sl[1], y1 = (r1[1] + r1[3]) / 2 - 23, y2 = (r2[1] + r2[3]) / 2 - 23, gx = (r1[2] + ro[0][0]) / 2, px = (pn[1][0] + r2[0]) / 2;
+        q.push(path([[r1[0] + 6, y1], [r1[2] - 16, y1], [gx, y1 + 34], [gx, y2 - 34], [r2[2] - 16, y2], [r2[0] + 16, y2], [px, y2 + 40]], at(y1, 0.74), at(y2, 0.36))); } }
+    q.push(Object.assign(lane('market', 0), { end: byId.map.top + byId.map.h * 0.5 }));
+    /* 06: from the margin over the tops of the plan's columns, then round the year's breakdown and out to the right */
+    q.push(Object.assign(lane('plan', 0), { start: byId.map.top + byId.map.h * 0.5 + 1 }));
+    { const PL = RIDES.plan, ps = PL && svgAt(PL.svg);
+      if (ps && PL.cx.length > 1) { const [ox, oy, k0] = ps, n = PL.cx.length; let key = '', tr = null;
+        const make = () => { const cy = PL.cy, hw = PL.band * 0.5, up = 50 / k0, pts = [[PL.cx[0] - hw * 0.95, cy[0] - up * 0.6]];     /* over each year's total, clear of its figure */
+          for (let i = 0; i < n; i++) { pts.push([PL.cx[i], cy[i] - up]); if (i < n - 1) pts.push([(PL.cx[i] + PL.cx[i + 1]) / 2, Math.min(cy[i], cy[i + 1]) - up]); }
+          pts.push([PL.cx[n - 1] + hw * 0.85, cy[n - 1] - up * 1.3]); return track(pts.map(p => [ox + p[0] * k0, oy + p[1] * k0]), false); };
+        const get = () => { const k = PL.cy.map(v => Math.round(v)).join(); if (k !== key || !tr) { key = k; tr = make(); } return tr; };
+        const t0 = get(), s0 = at(t0.ys[0], 0.95), s1 = Math.max(s0 + vh * 0.2, at(t0.ys[t0.ys.length - 1], 0.32));
+        q.push({ R: PL, svg: PL.svg, a: s0, b: s1, s0, s1, vmax: 1300, span: () => get().len, at(k, o, s) { const t = get(), d = k * t.len; lineAt(t, d, Q); o.x = Q.x; o.y = Q.y - s; o.face = headAt(t, d); o.lock = true; } }); } }
+    { const sv = $('#ydDonut svg'), ps = svgAt(sv), pn = docBox($('#yearDetail')), last = q[q.length - 1];
+      if (ps && pn) { const [ox, oy, k0] = ps, cx = ox + 110 * k0, cy = oy + 110 * k0, r = 100 * k0 + 14, s0 = (last.b || at(cy, 0.7)) + vh * 0.03, s1 = Math.max(s0 + vh * 0.12, Math.min(Math.max(s0 + vh * 0.3, at(cy, 0.25)), cy - r - navH - 12));
+        q.push(orbit({ x: cx, y: cy, rx: r, ry: r, th0: PI, turns: s1 - s0 >= vh * 0.25 ? 1.5 : 0.5, cw: true }, s0, s1)); } }
+    q.push(lane('plan', 1));
+    /* 06 → 07: across the gap under the data matrix */
+    { const m = docBox($('#matrixBox')), h = docBox($('#horizon .sh')); if (m && h) q.push(seam(m[3], h[1], 'plan', 1, 'horizon', 0)); }
+    q.push(lane('horizon', 0));
+    /* 07: the line to 2036, then the right margin */
+    if (traj) q.push(traj);
+    q.push(lane('horizon', 1));
+    /* 07 → 08: across the gap under the conditions */
+    { const a = docBox($('#horizon .panel.assume')), h = docBox($('#crew .sh')); if (a && h) q.push(seam(a[3], h[1], 'horizon', 1, 'crew', 0)); }
+    q.push(lane('crew', 0));
+    /* 08: in across the top of the team's chart, down onto its hub, round it, and down out of the team toward the raise */
+    { const hub = $('.sp-hub'), sp = $('#spider'), hb = docBox(hub), sb = docBox(sp);
+      if (hb && sb && hub.offsetWidth) { const hx = (hb[0] + hb[2]) / 2, hy = (hb[1] + hb[3]) / 2, rH = (parseFloat(sp.style.getPropertyValue('--hub')) / 2 || 100) + 24, band = sb[1] + 26, lx = lanes.crew.ok ? lanes.crew.x : 20;
+        const h0 = at(hy, 0.64), h1 = at(hy, 0.28);
+        q.push(path([[lx, band], [hx - rH - 90, band], [hx - rH * 0.62, hy - rH - 14], [hx, hy - rH]], at(band, 0.62), h0 - vh * 0.01));
+        q.push(orbit({ x: hx, y: hy, rx: rH, ry: rH, th0: -PI / 2, turns: 1.5, cw: true }, h0, h1));
+        q.push(path([[hx, hy + rH], [hx - 34, hy + rH + 44], [hx - 44, sb[3] + 70]], h1 + vh * 0.005, h1 + vh * 0.3, h1 + vh * 0.005, byId.raise.top + byId.raise.h * 0.5)); }
+      else q.push(Object.assign(lane('crew', 0), { end: byId.raise.top + byId.raise.h * 0.5 })); }
+    /* 10: from the raise into the left margin, across under the heading, round the flywheel, and back across under the scenarios */
+    q.push(Object.assign(lane('beyond', 0), { start: byId.raise.top + byId.raise.h * 0.5 + 1 }));
+    { const h = docBox($('#beyond .sh')), g = docBox($('#beyond .by-grid')); if (h && g) q.push(seam(h[3], g[1], 'beyond', 0, 'beyond', 1)); }
+    q.push(lane('beyond', 1));
+    { const FW = RIDES.fly, ps = FW && svgAt(FW.svg);
+      if (ps) { const [ox, oy, k0] = ps, cx = ox + FW.size / 2 * k0, cy = oy + FW.size / 2 * k0, step = TAU / FW.n; let was = -1;
+        const lg = orbit({ x: cx, y: cy, rx: FW.r * k0, ry: FW.r * k0, th0: 0, turns: 1, cw: true, stop: t => { const i = Math.floor((t + PI / 2) / step + 1e-6); if (i !== was) { was = i; FW.at(i); } } }, at(cy, 0.76), at(cy, 0.3));
+        lg.R = FW; lg.svg = FW.svg; q.push(lg); } }
+    q.push(lane('beyond', 1));
+    { const sc = docBox($('#beyond .scen')); if (sc) { const Y = (sc[3] + By.top + By.h) / 2, sm = seam(Y, Y, 'beyond', 1, 'beyond', 0); sm.s0 = sm.a = at(Y, 0.92); sm.s1 = sm.b = at(Y, 0.68); q.push(sm); } }
+    q.push(Object.assign(lane('beyond', 0), { end: 1e9 }));
+    /* a lane takes the room its neighbours leave it (or none, and they draw straight across); nothing starts before the one before it ends */
+    for (let i = 0; i < q.length; i++) { const g = q[i]; if (!g.lane) continue; const p = q[i - 1], nx = q[i + 1];
+      g.a = g.s0 = g.start !== undefined ? g.start : (p ? p.b : -1e9) + vh * 0.1; g.b = g.s1 = g.end !== undefined ? g.end : (nx ? nx.a : 1e9) - vh * 0.1; }
+    for (const g of q) { if (g.lane && g.b <= g.a) continue; const p = legs[legs.length - 1]; if (p && g.a < p.b) { const m = (g.a + p.b) / 2; if (!p.lane) p.b = Math.max(p.s1, m); g.a = Math.max(g.a, p.b); } legs.push(g); }
+  }
   function aim(sy, syS, dt, world, rooms, flat, moved) {
-    T.show = false; T.a = 1; T.face = null; T.k = 7; T.thr = 0; T.hide = null; T.cut = 0; T.dock = false; T.hard = false; T.len = 40;
-    const mid = syS + vh * 0.5, wasOrbit = orbitOn, wasRs = rsOn, wasLo = loOn, wasPre = preOn; orbitOn = rsOn = loOn = preOn = false; curMid = mid;   // round the globe, round the brief, up from the pad: each begins afresh when the story comes back to it
-    if (flat) { if (mid >= J.top - vh && mid < byId.traction.top + vh) onLine(sy, true); return; }   // no flight: it stands at the head of the journey's line
+    T.show = false; T.a = 1; T.face = null; T.k = 7; T.thr = 0; T.hide = null; T.cut = 0; T.dock = false; T.hard = false; T.len = 40; T.pin = 0; T.lock = false; T.lead = 0;
+    const mid = syS + vh * 0.5, wasOrbit = orbitOn, wasRs = rsOn, wasLo = loOn, wasPre = preOn; orbitOn = rsOn = loOn = preOn = false;   // round the globe, round the brief, up from the pad: each begins afresh when the story comes back to it
+    if (flat) { if (!flatRide(sy) && mid >= J.top - vh && mid < byId.traction.top + vh) onLine(sy, true); return; }   // no flight: it stands at the head of the journey's line, or of a chart's
     if (B.x < 0 && sys.state.born < 0.5) { sysOn = false; return; }                                  // the opening: it is away (in the first screen's own rocket, sysmap.js) until the new planet is born
     const out = world.out;
     /* 01 · the system, and the dive at Freedom Global */
@@ -249,15 +403,15 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
     }
     /* 02 · the journey: the head of the line */
     if (mid < byId.traction.top) { onLine(sy, false); return; }
-    /* 03, 04 · the figures: the left margin */
-    if (mid < M.top) { margin(partAt(mid)); return; }
+    /* 03, 04 · on the figures */
+    if (mid < M.top) { reading(sy); return; }
     /* 05 · the expansion map: round the globe, in front and then away behind it */
     if (mid < byId.plan.top) {
-      const o = world.map, before = M.x < M.len * 0.5, side = before ? 'market' : 'plan';
-      if (!o || !o.live || world.mode !== 'globe') { margin(side); return; }
+      const o = world.map;
+      if (!o || !o.live || world.mode !== 'globe') { reading(sy); return; }
       const st = M.x < 0 ? -M.x * vh : M.x > M.len ? -(M.x - M.len) * vh : 0, gx = o.x, gy = o.y + st, r = o.r;
       /* it goes over to the globe once the globe is well up the screen, and back to the margin as the globe leaves */
-      const w0 = span(gy, vh * 1.02, vh * 0.72) * (1 - span(M.x - M.len, 0.2, 0.5)), had = margin(side), mx = T.x, my = T.y;
+      const w0 = span(gy, vh * 1.02, vh * 0.72) * (1 - span(M.x - M.len, 0.2, 0.5)), had = reading(sy), mx = T.x, my = T.y;
       if (w0 <= 0.001 || (!had && w0 < 0.6)) { if (!had) T.show = false; return; }
       const w = had ? w0 : 1;                                                    // where there is no margin to come from, it comes in from the edge of the screen
       /* the orbit: wide by day; closer in while the cards stand beside the globe; out again with the ring as it goes */
@@ -267,12 +421,12 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
       if (!wasOrbit) th = PI; orbitOn = true;                                    // it joins at the left end, and takes the front first
       th -= Math.min(moved * 0.8 + 34 * dt, 900 * dt) / rx; if (th < -PI) th += TAU;
       const ex = Math.cos(th) * rx, ey = Math.sin(th) * ry, ox = gx + ex * ct + ey * sn, oy = gy - ex * sn + ey * ct;
-      T.show = true; T.face = null; T.thr = 0; T.k = 9; T.len = lerp(had ? T.len : base, base * (1 + 0.14 * Math.sin(th)), w); T.x = lerp(mx, ox, w); T.y = Math.min(lerp(my, oy, w), M.x < 0 ? vh - T.len : 1e5);   // while the globe is still rising its lower half is off the screen: the rocket is not
+      T.show = true; T.face = null; T.thr = 0; T.k = 9; T.pin *= 1 - w; T.lead *= 1 - w; T.lock = false; T.len = lerp(had ? T.len : base, base * (1 + 0.14 * Math.sin(th)), w); T.x = lerp(mx, ox, w); T.y = Math.min(lerp(my, oy, w), M.x < 0 ? vh - T.len : 1e5);   // while the globe is still rising its lower half is off the screen: the rocket is not
       if (Math.sin(th) < 0 && w > 0.5) { hole.x = gx; hole.y = gy; hole.r = r; T.hide = hole; }
       return;
     }
-    /* 06, 07, 08 · the growth plan, the horizon, the team: the left margin */
-    if (mid < R.top) { margin(partAt(mid)); return; }
+    /* 06, 07, 08 · the growth plan, the horizon, the team: on the figures */
+    if (mid < R.top) { reading(sy); return; }
     /* 09 · the raise */
     if (mid < byId.beyond.top) {
       const e = R.pe;
@@ -283,18 +437,18 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
       }
       if (!rsRoute) rsRoute = buildRaise() || { none: true };
       const rt = rsRoute, away = 1 + 0.45 / R.len;
-      if (rt.none) { if (e < 0.02 || e > away) margin(e < 0.5 ? 'crew' : 'beyond'); return; }
+      if (rt.none) { if (e < 0.02 || e > away) reading(sy); return; }
       /* how far round it should be by now; it gets there at its own pace, so a quick scroll never drags it across the brief */
       const m = rt.m, n = rt.end, to = e < 0.3 ? lerp(0, m[2], smooth(e / 0.3)) : e < 0.62 ? lerp(m[2], m[4], (e - 0.3) / 0.32) : e < 0.91 ? lerp(m[4], m[n], smooth((e - 0.62) / 0.22)) : lerp(m[n], rt.tr.len, smooth((e - 0.91) / (away - 0.91)));
       rsD = wasRs ? rsD + clamp((to - rsD) * Math.min(1, dt * 6), -1200 * dt, 1200 * dt) : to; rsOn = true;
       const last = clamp((rsD - m[n]) / Math.max(1, rt.tr.len - m[n]));
       rt.tr.at(rsD, P); T.show = true; T.thr = 0.3; T.k = 8; T.len = rt.back ? lerp(rt.size, gut.beyond.len, last) : rt.size; T.x = P.x; T.y = P.y + lead * smooth(last); if (last > 0.96) T.face = dir > 0 ? DOWN : UP;
       if (!rt.back && e > 0.93) T.show = false;                                    // nowhere to go on to: it leaves with the brief
-      if (e < 0.02 && margin('crew')) { const k = span(R.x, -0.5, 0); T.x = lerp(T.x, P.x, k); T.y = lerp(T.y, P.y, k); T.len = lerp(T.len, rt.size, k); }
+      if (e < 0.02) { const fx = T.x, fy = T.y, fl = T.len; if (reading(sy)) { const k = span(R.x, -0.5, 0); T.x = lerp(T.x, P.x, k); T.y = lerp(T.y, P.y, k); T.len = lerp(T.len, rt.size, k); T.pin *= 1 - k; T.lead *= 1 - k; T.lock = false; T.face = null; } else { T.show = true; T.x = fx; T.y = fy; T.len = fl; T.pin = 0; T.lead = 0; T.lock = false; } T.hard = false; T.k = 8; T.thr = 0.3; }
       return;
     }
-    /* 10 · Beyond: the left margin, until liftoff's own words are about to come up beside it */
-    if (L.x < -0.66) { margin('beyond'); return; }
+    /* 10 · Beyond: on the flywheel, then the left margin, until liftoff's own words are about to come up beside it */
+    if (L.x < -0.66) { reading(sy); return; }
     /* 11 · liftoff. While the view comes down to the pad it drops down the margin to the foot of the screen; from
        there one long climbing turn takes it under the closing words and across onto the line the launch rocket will
        come down, then straight up that line and out through the top of the screen, well before that rocket is due.
@@ -309,7 +463,7 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
     const ax = narrow ? vw * 0.14 : lo.l / 2, ay = narrow ? lo.b + (vh - lo.b) * 0.5 : Math.max(lo.b + 70, vh * (1 + C0) - 50);      // where the climb starts from, on the stage
     if (x0 < C0) {
       if (narrow) { if (x0 < -0.42) { T.show = false; return; } const k = span(x0, -0.42, C0); T.x = lerp(-70, ax, k); T.y = Math.min(ay + st, vh - 40) + (1 - k) * 24; return; }   // no margin to come down: in from the left edge, low
-      const had = margin('beyond'), k = span(x0, -0.5, C0); T.show = true; T.thr = 0.3; T.x = lerp(had ? T.x : ax, ax, span(x0, -0.66, -0.53)); T.y = lerp(had ? T.y : vh * 0.6, Math.min(ay + st, vh - 40), k); T.len = lerp(had ? gut.beyond.len : len0, len0, k); T.face = DOWN; return;   // across to this scene's own margin before its heading comes up, then down
+      const had = reading(sy), k = span(x0, -0.5, C0); T.pin = 0; T.lock = false; T.lead = 0; T.show = true; T.thr = 0.3; T.x = lerp(had ? T.x : ax, ax, span(x0, -0.66, -0.53)); T.y = lerp(had ? T.y : vh * 0.6, Math.min(ay + st, vh - 40), k); T.len = lerp(had ? gut.beyond.len : len0, len0, k); T.face = DOWN; return;   // across to this scene's own margin before its heading comes up, then down
     }
     /* how far up it should be by now; it never takes the whole climb in less than seven tenths of a second, however fast the scroll */
     const to = Math.pow(clamp((x0 - C0) / 0.66), 1.25); loE = wasLo ? loE + clamp(to - loE, -dt / 0.7, dt / 0.7) : to; loOn = true;
@@ -320,7 +474,7 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
 
   /* ───────── the rocket itself ───────── */
   let state = 'off', x = 0, y = 0, vx = 0, vy = 0, ang = UP, bank = 0, len = 40, alpha = 0, flame = 0.5, exitX = 0, exitY = 0, calm = 0; const NONE = {};
-  let wShown = false, wTr = '', wOp = -1, wFlame = -1, wClip = '', wCut = -1;
+  let wShown = false, wTr = '', wOp = -1, wFlame = -1, wClip = '', wCut = -1, ltx = 0, lty = 0, tvx = 0, tvy = 0, tvOn = false;
   /* the edge nearest a point (the right-hand one only where no rail stands on it), and a place just outside it */
   function edge(px, py, o) {
     const cl = px, cr = railX < 1e4 ? 1e6 : vw - px, ct = py * 1.4, cb = (vh - py) * 1.1, m = Math.min(cl, cr, ct, cb);
@@ -333,12 +487,16 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
      rooms: what the page has measured on a phone's raise (see padRooms in main.js) */
   function frame(sy, syS, dt, t, world, rooms) {
     if (dirty) measure();
+    for (let i = 0; i < RID.length; i++) { const r = RIDES[RID[i]]; if ((r && r.svg) !== laid[i]) { measure(); break; } }     /* a figure drawn (or drawn again at a new size): the legs are laid again */
+    fno++; fdt = Math.min(dt, 0.1);
     const flat = STILL || !world || !sys, dS = sy - lastSy, dSm = syS - lastS, jumped = Math.abs(dSm) > vh * 0.9; lastSy = sy; lastS = syS;
     if (!flat && dS) { run = (dS > 0) === (run > 0) ? run + dS : dS; if (Math.abs(run) > 24) dir = run > 0 ? 1 : -1; }      // which way the page is heading: a real move, not a pixel of settling
     sv += (dS / Math.max(dt, 0.004) - sv) * Math.min(1, dt * 8); lead += (dir * vh * 0.09 - lead) * Math.min(1, dt * 2.2);
     aim(sy, syS, dt, world, rooms || NONE, flat, jumped ? 0 : Math.abs(dSm));
+    /* a line the courier is not on is drawn to where the scroll has it: all of it once passed, none of it before */
+    for (const Lg of legs) if (Lg.ride && Lg.seen !== fno) Lg.R.go(STILL ? 1 : sy < Lg.s0 ? 0 : sy > Lg.s1 ? 1 : (sy - Lg.s0) / (Lg.s1 - Lg.s0));
     if (flat) {                     /* parked at the head of the line: no flight, no flame */
-      if (!T.show) { hideShip(); return; } x = T.x; y = T.y; len = T.len; alpha = 1; ang = DOWN; bank = 0; flame = STILL ? 0 : 0.5; state = 'on'; draw(t, 0); return;
+      if (!T.show) { hideShip(); return; } x = T.x; y = T.y; len = T.len; alpha = 1; ang = T.face === null ? DOWN : T.face; bank = 0; flame = STILL ? 0 : 0.5; state = 'on'; draw(t, 0); return;
     }
     /* is it here, leaving, or away */
     if (!T.show) { if (state === 'on') { if (outside(x, y, len)) state = 'off'; else { state = 'out'; edge(x, y, P); exitX = P.x; exitY = P.y; } } }
@@ -348,19 +506,26 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
       if (calm > 0.22) { state = 'on'; len = T.len; alpha = 0; if (outside(T.x, T.y, 0)) { x = T.x; y = T.y; vx = vy = 0; } else { edge(T.x, T.y, P); x = P.x; y = P.y; const d = Math.hypot(T.x - x, T.y - y) || 1; vx = (T.x - x) / d * 500; vy = (T.y - y) / d * 500; ang = Math.atan2(vy, vx); } }
     } else if (state === 'on' && (jumped || (!T.hard && Math.hypot(T.x - x, T.y - y) > Math.max(420, vh * 0.62))) && !outside(x, y, len)) { state = 'out'; edge(x, y, P); exitX = P.x; exitY = P.y; }
     if (state === 'off') { hideShip(); return; }
-    /* it chases its target: a critically damped spring, stable at any frame length */
+    /* on a figure the target is fixed to the page: the rocket is carried with the page, so it only chases what moves on it */
+    if (state === 'on' && T.pin > 0 && Math.abs(dS) < vh * 0.9) y -= dS * T.pin;
+    /* how fast the target moves over the page; fed ahead by that, the spring is at the target, not behind it */
+    const page = state === 'on' && T.show && !jumped, gx = T.x, gy = T.y + sy * T.pin;
+    if (page && tvOn && fdt > 0) { const ux = (gx - ltx) / fdt, uy = (gy - lty) / fdt; if (Math.abs(ux) + Math.abs(uy) < 6000) { tvx += (ux - tvx) * Math.min(1, fdt * 14); tvy += (uy - tvy) * Math.min(1, fdt * 14); } else tvx = tvy = 0; } else tvx = tvy = 0;
+    tvOn = page; ltx = gx; lty = gy;
     let tx = T.x, ty = T.y, w = T.k;
+    if (T.lead > 0 && state === 'on') { tx += clamp(tvx, -1800, 1800) * T.lead * 2 / w; ty += clamp(tvy, -1800, 1800) * T.lead * 2 / w; }
     if (state === 'out') { tx = exitX; ty = exitY; w = 9; if (outside(x, y, len * 1.1)) { state = 'off'; calm = 0; hideShip(); return; } }
     const f = 1 + 2 * dt * w, hw = dt * w * w, det = 1 / (f + dt * hw), nx = (f * x + dt * vx + dt * hw * tx) * det, ny = (f * y + dt * vy + dt * hw * ty) * det;
     vx = (vx + hw * (tx - x)) * det; vy = (vy + hw * (ty - y)) * det; x = nx; y = ny;
     const speed = Math.hypot(vx, vy);
     /* the nose follows the way it is going; at rest it faces where this part of the story says */
-    const want = speed > 26 || T.face === null || state === 'out' ? (speed > 6 ? Math.atan2(vy, vx) : ang) : T.face, da = wrap(want - ang), turn = clamp(da * Math.min(1, dt * 9), -(5.2 + 3.6 * Math.abs(da) / PI) * dt, (5.2 + 3.6 * Math.abs(da) / PI) * dt);
+    const near = T.lock && T.face !== null && state === 'on' && Math.hypot(T.x - x, T.y - y) < len * 1.2;   /* on a figure it keeps facing along it, even as the scroll walks it back */
+    const want = near ? T.face : speed > 26 || T.face === null || state === 'out' ? (speed > 6 ? Math.atan2(vy, vx) : ang) : T.face, da = wrap(want - ang), turn = clamp(da * Math.min(1, dt * 9), -(5.2 + 3.6 * Math.abs(da) / PI) * dt, (5.2 + 3.6 * Math.abs(da) / PI) * dt);
     ang = wrap(ang + turn); bank += (clamp(turn / Math.max(dt, 0.004) * 0.06, -0.35, 0.35) - bank) * Math.min(1, dt * 6);
     len += ((state === 'out' ? len : T.len) - len) * Math.min(1, dt * 5);
     const aTo = state === 'out' ? 1 : T.a; alpha = T.hard && aTo < alpha ? aTo : alpha + (aTo - alpha) * Math.min(1, dt * 9);
     flame += (clamp(0.5 + Math.max(speed, Math.abs(sv) * T.thr) / 700, 0.5, 1.7) - flame) * Math.min(1, dt * 5);
-    draw(t, clamp(1 - speed / 60));
+    draw(t, clamp(1 - speed / 60) * (T.pin ? 0.35 : 1));
   }
   /* one transform; the flame's length, the opacity and the cuts only when they change */
   function draw(t, rest) {
