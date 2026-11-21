@@ -1696,14 +1696,13 @@ html.booting #nav,html.booting #rail{opacity:0;pointer-events:none}
 /* ───────── the one rocket, and the courier (js/courier.js) ─────────
    One drawing, three places: the courier on its layer over the page, the handle on the progress rail, the rocket that
    leads a chart's line. It is the launch rocket of the last part: porcelain, a pink nose and bands, a carbon base.
-   The keyline is what holds it on a white ground; on carbon it is not seen. */
-.rk-p{fill:#FBF9F5}
-.rk-h{fill:var(--pink)}
-.rk-c{fill:#191A1E;stroke:rgba(244,241,235,.36);stroke-width:1px;vector-effect:non-scaling-stroke;paint-order:stroke}
-.rk-s{fill:#101010;opacity:.15}
+   The keyline is what holds it on a white ground; on carbon it is not seen. Each part's paint is the drawing's own (a
+   cylinder's shading, a bell's heat, a flame's fade); here are only its lines: the keyline, a hair of light round the
+   carbon so it holds on carbon, and the ring welds, which the rail leaves off (at its size they would only be noise). */
+.rk-c{stroke:rgba(244,241,235,.3);stroke-width:1px;vector-effect:non-scaling-stroke;paint-order:stroke}
 .rk-k{fill:none;stroke:#101010;stroke-opacity:.62;stroke-width:2px;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.rk-xo{fill:var(--pink)}
-.rk-xi{fill:#FFF1F7}
+.rk-d{fill:none;stroke:#101010;stroke-opacity:.11;stroke-width:.75px;vector-effect:non-scaling-stroke}
+#rail .rk-d,#rail .rk-xd{display:none}
 .rk-x{opacity:0;transform-box:fill-box;transform-origin:50% 0;transition:opacity .5s}
 .rk-xf{transform-box:fill-box;transform-origin:50% 0}
 /* the courier's layer: over the page's content, under the bar, the rail, the dialogs and the pointer; nothing in it

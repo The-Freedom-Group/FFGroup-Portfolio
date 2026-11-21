@@ -21,29 +21,73 @@
 import { $, $$, el, svg, clamp, lerp, smooth, span, STILL } from './kit.js';
 
 /* ───────── the drawing ─────────
-   In its own units: the nose at (0, 0) pointing up, 48 long to the nozzles, the flame beyond. */
+   In its own units: the nose at (0, 0) pointing up, 48 long to the nozzles, the flame beyond. It is the launch vehicle of
+   the last part (w-pad.js) at the same stations, drawn a little stouter so it holds at the rail's size: the core's ogive
+   nose, pink to 4.7, its fairing to 11.4, the carbon interstage, the pink band, the carbon skirt and three heat-tinted
+   bells; each booster's ogive nose, band, skirt and bell, and the attach fairing that holds it on. Every part is shaded as
+   a cylinder lit from the left (one gradient to a material, laid across each part's own box) and the ring welds are hair
+   lines (left off on the rail, where they would only be noise). The flame is three layers to an engine, the pink, a paler
+   pink and, at the nozzle, the white-hot core, with a shock diamond or two down the core's. */
 export const ART = { w: 12.8, len: 48, tail: 16.4 };
-const CORE = 'M0 0C1 1.2 1.55 2.9 1.75 4.7C2.2 6.8 2.5 9 2.5 11.4V43.6L2.7 46.6H1.3L1.9 48H-1.9L-1.3 46.6H-2.7L-2.5 43.6V11.4C-2.5 9-2.2 6.8-1.75 4.7C-1.55 2.9-1 1.2 0 0Z';
-const SIDE = 'M3.95 21.4C4.7 22.3 5.2 23.6 5.35 25.2V44.3L5.45 46.6H4.75L5.15 47.9H2.75L3.15 46.6H2.45L2.55 44.3V25.2C2.7 23.6 3.2 22.3 3.95 21.4Z';
-/* one booster's parts (the right-hand one; the other is its mirror): porcelain, pink, carbon, flame */
-const SIDE_P = 'M2.55 25.2H5.35V44.3H2.55Z', SIDE_H = 'M3.95 21.4C4.7 22.3 5.2 23.6 5.35 25.2H2.55C2.7 23.6 3.2 22.3 3.95 21.4ZM2.55 30H5.35V31.2H2.55Z';
-const SIDE_C = 'M2.55 44.3H5.35L5.45 46.6H2.45ZM3.15 46.6H4.75L5.15 47.9H2.75Z', SIDE_X = 'M2.95 47.3C2.5 50.6 3.4 54.4 3.95 57.6C4.5 54.4 5.4 50.6 4.95 47.3Z';
-const FLIP = 'scale(-1 1)';
-/* draws the rocket into an svg (or a g): flame first, then a keyline that shows on a light ground, then the livery.
+const CR = 2.5, BC = 4.1, BR = 1.38, CN = 11.4, PN = 4.7, BT = 21.4, BN = 25.4, NOZ = 47.3;   // the core's half-width; where each booster stands, its half-width; where the noses end and their pink; where the flames start
+const n2 = v => Math.round(v * 100) / 100;
+const pathOf = pts => pts.map((p, i) => (i ? 'L' : 'M') + n2(p[0]) + ' ' + n2(p[1])).join('') + 'Z';
+/* a closed shape from its right-hand edge, top to bottom, and that edge's mirror about cx */
+const shape = (cx, edge) => pathOf(edge.concat(edge.slice().reverse().map(([x, y]) => [2 * cx - x, y])));
+const box = (x, y, w, h) => `M${n2(x)} ${n2(y)}h${n2(w)}v${n2(h)}h${n2(-w)}Z`;
+/* the edge of a tangent ogive nose: its tip at (cx, y0), full radius r at y1; as far as `to` (where its pink ends), closer toward the tip */
+const nose = (cx, r, y0, y1, to = y1) => { const L = y1 - y0, rho = (r * r + L * L) / (2 * r);
+  return Array.from({ length: 15 }, (_, i) => { const d = (to - y0) * Math.pow(i / 14, 1.6), x = L - d; return [cx + Math.sqrt(rho * rho - x * x) + r - rho, y0 + d]; }); };
+/* a bell, throat to lip; and an engine's flame, which swells a little out of the nozzle and then draws to a point */
+const bell = (cx, tw, lw) => `M${n2(cx - tw)} 46.3C${n2(cx - tw)} 47 ${n2(cx - lw * 0.86)} 47.4 ${n2(cx - lw)} 48H${n2(cx + lw)}C${n2(cx + lw * 0.86)} 47.4 ${n2(cx + tw)} 47 ${n2(cx + tw)} 46.3Z`;
+const lick = (cx, hw, y1) => { const y0 = NOZ, a = y0 + (y1 - y0) * 0.28, b = y0 + (y1 - y0) * 0.68;
+  return `M${n2(cx - hw)} ${y0}C${n2(cx - hw * 1.22)} ${n2(a)} ${n2(cx - hw * 0.42)} ${n2(b)} ${n2(cx)} ${n2(y1)}C${n2(cx + hw * 0.42)} ${n2(b)} ${n2(cx + hw * 1.22)} ${n2(a)} ${n2(cx + hw)} ${y0}Z`; };
+const SEAMS = [15, 17.6, 20.1, 25.3, 27.9, 30.4, 33, 35.6, 38.2, 40.7], BSEAMS = [26.1, 28.7, 33.9, 36.4, 39, 41.6];   // the ring welds, where the 3D skin has them
+/* one booster (s: 1 the right, -1 the left), mirrored point by point so the light stays on the left of both */
+const side = s => { const m = pts => pts.map(([x, y]) => [s * x, y]), cx = s * BC, edge = [...nose(BC, BR, BT, BN), [BC + BR, 44.2]];
+  return { body: shape(cx, m(edge)), keel: shape(cx, m([...edge, [BC + 1.5, 46.5]])), nose: shape(cx, m(nose(BC, BR, BT, BN))), band: box(cx - BR, 29.9, 2 * BR, 0.9),
+    skirt: shape(cx, m([[BC + BR, 44.2], [BC + 1.5, 46.5]])), pod: box(s > 0 ? 2.4 : -2.82, 28.1, 0.42, 0.42), seams: BSEAMS.map(y => `M${n2(cx - BR)} ${y}h${2 * BR}`).join('') }; };
+const SIDES = [side(-1), side(1)], CORE_EDGE = [...nose(0, CR, 0, CN), [CR, 43.4]];
+const PARTS = {
+  keel: shape(0, [...CORE_EDGE, [2.66, 46.5]]) + SIDES.map(b => b.keel).join(''),
+  body: shape(0, CORE_EDGE), nose: shape(0, nose(0, CR, 0, CN, PN)), band: box(-CR, 21.8, 2 * CR, 1.5),
+  carbon: box(-CR, 13.4, 2 * CR, 1.2) + shape(0, [[CR, 43.4], [2.66, 46.5]]),
+  seams: [11.55, ...SEAMS].map(y => `M${-CR} ${y}h${2 * CR}`).join('') + SIDES.map(b => b.seams).join(''),
+  bells: [[-1.15, 0.3, 0.84], [1.15, 0.3, 0.84], [0, 0.32, 0.9], [-BC, 0.26, 0.74], [BC, 0.26, 0.74]].map(e => bell(...e)),   // the core's two back bells, its front one, the boosters'
+  flames: [[0, 2, 64.4, 1.34, 59.4, 0.8, 54.9], [BC, 0.8, 57.8, 0.54, 54.3, 0.32, 51.3]],   // the core's and a booster's: where, then each layer's half-width at the nozzle and its tip (the pink, the paler pink, the white)
+  diamonds: 'M0 55.6l.34.75-.34.75-.34-.75ZM0 58.3l.26.6-.26.6-.26-.6Z'
+};
+/* the paints: [down, stops]. Across a part (lit from the left), or down it, for a bell (bronze at the throat, blue and
+   violet down the middle, pale at the lip) and for each layer of the flame (fading out to its point) */
+const PAINT = {
+  p: [0, [[0, '#d3cec4'], [0.1, '#efebe3'], [0.3, '#ffffff'], [0.52, '#f6f3ed'], [0.76, '#e2ddd3'], [0.93, '#c8c2b7'], [1, '#b3ada2']]],
+  h: [0, [[0, '#e0207a'], [0.28, '#ff63aa'], [0.48, '#ff2d8d'], [0.8, '#e2187a'], [1, '#b8125f']]],
+  c: [0, [[0, '#1b1c20'], [0.28, '#3b3d44'], [0.52, '#1d1e22'], [1, '#070708']]],
+  m: [1, [[0, '#a17b5d'], [0.5, '#5b4f7b'], [1, '#d9d3c9']]],
+  s: [0, [[0, '#000', 0.5], [0.3, '#fff', 0.22], [0.5, '#000', 0], [1, '#000', 0.6]]],
+  xo: [1, [[0, '#ff2d8d', 1], [0.55, '#ff2d8d', 0.88], [1, '#ff2d8d', 0]]],
+  xm: [1, [[0, '#ff8cc4', 1], [0.6, '#ff8cc4', 0.8], [1, '#ff8cc4', 0]]],
+  xi: [1, [[0, '#ffffff', 1], [0.6, '#fff0f7', 0.9], [1, '#ffe3f0', 0]]]
+};
+/* draws the rocket into an svg (or a g): flame first, then a keyline that shows on a light ground, then the vehicle.
    Returns the flame, so the caller can lengthen it. trail: a faint streak beyond the flame (the courier only). */
 export function rocketArt(parent, { trail = false } = {}) {
-  const g = svg('g', { class: 'rk-art' }, parent), flame = svg('g', { class: 'rk-x' }, g), lick = svg('g', { class: 'rk-xf' }, flame);
-  if (trail) { const id = 'rkTrail' + (rocketArt.n = (rocketArt.n || 0) + 1), lg = svg('linearGradient', { id, gradientUnits: 'userSpaceOnUse', x1: 0, y1: 56, x2: 0, y2: 82 }, svg('defs', null, lick));
+  const n = rocketArt.n = (rocketArt.n || 0) + 1, g = svg('g', { class: 'rk-art' }, parent), defs = svg('defs', null, g), url = {};
+  for (const k in PAINT) { const [down, stops] = PAINT[k], id = `rk${n}${k}`, lg = svg('linearGradient', { id, x1: 0, y1: 0, x2: down ? 0 : 1, y2: down ? 1 : 0 }, defs); url[k] = `url(#${id})`;
+    for (const [o, c, a] of stops) svg('stop', { offset: o, 'stop-color': c, 'stop-opacity': a === undefined ? 1 : a }, lg); }
+  const part = (d, cls, fill, at = g) => svg('path', { d, class: cls, fill }, at);
+  const flame = svg('g', { class: 'rk-x' }, g), lick2 = svg('g', { class: 'rk-xf' }, flame);
+  if (trail) { const lg = svg('linearGradient', { id: `rk${n}t`, gradientUnits: 'userSpaceOnUse', x1: 0, y1: 56, x2: 0, y2: 82 }, defs);
     svg('stop', { offset: 0, 'stop-color': '#ff74b8', 'stop-opacity': 0.5 }, lg); svg('stop', { offset: 1, 'stop-color': '#ff74b8', 'stop-opacity': 0 }, lg);
-    svg('path', { d: 'M-.7 56H.7V82H-.7Z', fill: `url(#${id})`, class: 'rk-t' }, lick); }
-  svg('path', { d: 'M-1.75 47.4C-2.5 52-.9 58 0 64.4C.9 58 2.5 52 1.75 47.4Z' + SIDE_X, class: 'rk-xo' }, lick); svg('path', { d: SIDE_X, class: 'rk-xo', transform: FLIP }, lick);
-  svg('path', { d: 'M-.85 47.4C-1.15 50-.4 53.6 0 56.6C.4 53.6 1.15 50 .85 47.4Z', class: 'rk-xi' }, lick);
-  svg('path', { d: CORE + SIDE, class: 'rk-k' }, g); svg('path', { d: SIDE, class: 'rk-k', transform: FLIP }, g);
-  svg('path', { d: 'M-1.75 4.7H1.75C2.2 6.8 2.5 9 2.5 11.4V43.6H-2.5V11.4C-2.5 9-2.2 6.8-1.75 4.7Z' + SIDE_P, class: 'rk-p' }, g); svg('path', { d: SIDE_P, class: 'rk-p', transform: FLIP }, g);
-  svg('path', { d: 'M0 0C1 1.2 1.55 2.9 1.75 4.7H-1.75C-1.55 2.9-1 1.2 0 0ZM-2.5 21.7H2.5V23.4H-2.5Z' + SIDE_H, class: 'rk-h' }, g); svg('path', { d: SIDE_H, class: 'rk-h', transform: FLIP }, g);
-  svg('path', { d: 'M-2.5 13.6H2.5V14.4H-2.5ZM-2.5 43.6H2.5L2.7 46.6H-2.7ZM-1.3 46.6H1.3L1.9 48H-1.9Z' + SIDE_C, class: 'rk-c' }, g); svg('path', { d: SIDE_C, class: 'rk-c', transform: FLIP }, g);
-  /* the side away from the light, a shade darker */
-  svg('path', { d: 'M.8 1.2C1.3 2.3 1.6 3.5 1.75 4.7C2.2 6.8 2.5 9 2.5 11.4V43.6L2.7 46.6H.8ZM4.3 22C4.9 22.9 5.25 24 5.35 25.2V44.3L5.45 46.6H4.3ZM-3.6 22C-3.3 22.4-2.7 24-2.55 25.2V46.6H-3.6Z', class: 'rk-s' }, g);
+    part('M-.7 56H.7V82H-.7Z', 'rk-t', `url(#rk${n}t)`, lick2); }
+  [['xo', 1], ['xm', 3], ['xi', 5]].forEach(([k, i]) => { const [c, b] = PARTS.flames; part(lick(c[0], c[i], c[i + 1]), 'rk-' + k, url[k], lick2); part(lick(-b[0], b[i], b[i + 1]) + lick(b[0], b[i], b[i + 1]), 'rk-' + k, url[k], lick2); });
+  part(PARTS.diamonds, 'rk-xd', '#fff', lick2);
+  part(PARTS.keel + PARTS.bells.join(''), 'rk-k', 'none');
+  PARTS.bells.forEach(d => { part(d, 'rk-m', url.m); part(d, 'rk-s', url.s); });
+  part(PARTS.body, 'rk-p', url.p); SIDES.forEach(b => part(b.body, 'rk-p', url.p));
+  [PARTS.nose, PARTS.band, ...SIDES.flatMap(b => [b.nose, b.band])].forEach(d => part(d, 'rk-h', url.h));
+  [PARTS.carbon, ...SIDES.map(b => b.skirt)].forEach(d => part(d, 'rk-c', url.c)); part(SIDES.map(b => b.pod).join(''), 'rk-c', '#2a2b30');
+  part(PARTS.seams, 'rk-d', 'none');
   return flame;
 }
 

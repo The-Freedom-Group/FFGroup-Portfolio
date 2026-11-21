@@ -107,12 +107,46 @@ void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = min
 const SMOKE_FS = `uniform sampler2D map; varying float vA; varying float vH;
 void main(){ float a = texture2D(map, gl_PointCoord).a * vA; if (a < 0.004) discard; vec3 cold = vec3(0.27, 0.26, 0.3), warm = vec3(0.95, 0.46, 0.62), hot = vec3(2.3, 1.3, 1.6);
   vec3 c = mix(cold, warm, smoothstep(0.0, 0.6, vH)); c = mix(c, hot, smoothstep(0.6, 1.0, vH)); gl_FragColor = vec4(c, a); }`;
+/* an engine's flame: a volume inside a bounding cylinder (its axis +z from the nozzle exit), marched along the view ray, as
+   the group site's FG-01 draws its own. JETS nozzles feed it: apart at the exits, they run together into one column a
+   little way down. White-hot down the middle, through the pink to a deep magenta at the edge, turbulent at its skin, with
+   shock diamonds down the axis. It is never marched past its own length, nor past zMax (the mount or the ground). */
+const PLUME_VS = `varying vec3 vPos; varying vec3 vCam;
+void main(){ vPos = position; vCam = (inverse(modelMatrix) * vec4(cameraPosition, 1.0)).xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const plumeFS = (steps, jets) => GLSL_NOISE + `
+varying vec3 vPos; varying vec3 vCam; uniform float time, L, zMax, RJ, RC, RM, spread, power, seed; uniform vec2 jet[${jets}];
+void main(){
+  vec3 ro = vCam, rd = normalize(vPos - vCam); float tEnd = length(vPos - vCam), zEnd = min(zMax, L);
+  float a = dot(rd.xy, rd.xy), b = dot(ro.xy, rd.xy), c = dot(ro.xy, ro.xy) - RM * RM, h = b * b - a * c;
+  if (h <= 0.0 || a < 1e-7 || zEnd <= 0.0) discard;
+  float sq = sqrt(h), t0 = (-b - sq) / a, t1 = (-b + sq) / a;
+  float iz = 1.0 / (abs(rd.z) > 1e-5 ? rd.z : 1e-5), z0 = -ro.z * iz, z1 = (zEnd - ro.z) * iz;
+  float tn = max(max(t0, min(z0, z1)), 0.0), tf = min(min(t1, max(z0, z1)), tEnd);
+  if (tf <= tn) discard;
+  float dt = (tf - tn) / ${steps}.0, jit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233)) + seed) * 43758.5453);
+  const vec3 coreC = vec3(2.3, 2.0, 2.15), midC = vec3(1.8, 0.3, 0.85), hazeC = vec3(0.7, 0.08, 0.3);
+  vec3 col = vec3(0.0);
+  for (int i = 0; i < ${steps}; i++) {
+    vec3 p = ro + rd * (tn + (float(i) + jit) * dt); float z = clamp(p.z / L, 0.0, 1.0);
+    float w = 1.0 + z * spread, m = smoothstep(0.0, 0.14, z), core = 0.0;
+    float wc = mix(RJ, RC, m) * (1.0 - 0.62 * z);                                    /* the hot core narrows as it goes, the sheath round it spreads */
+    for (int j = 0; j < ${jets}; j++) { float q = length(p.xy - jet[j] * (1.0 - m)) / wc; core += exp(-q * q * 5.0); }
+    float fall = pow(1.0 - z, 1.35), qs = length(p.xy) / (RC * w * 1.25);
+    float n = noise3(vec3(p.xy / RJ * 1.4, p.z / RJ * 0.45 - time * 9.0 + seed));
+    core *= fall / mix(1.0, ${jets}.0, m);
+    float sheath = exp(-qs * qs * 1.4) * fall * (0.45 + 0.75 * n);
+    float shock = pow(0.5 + 0.5 * cos(z * 6.2832 * 3.4), 10.0) * exp(-qs * qs * 9.0) * (1.0 - z) * 0.9 * smoothstep(0.04, 0.2, z);
+    float hot = clamp(core * 2.2 + shock, 0.0, 1.0);
+    col += (mix(midC, coreC, hot) * (core + shock) * 2.2 + hazeC * sheath * 0.5) * dt / RJ;
+  }
+  col *= power / (1.0 + 5.0 * pow(abs(rd.z), 4.0)); col /= 1.0 + 0.25 * max(col.r, max(col.g, col.b)); gl_FragColor = vec4(col, 1.0);   /* seen up the flame it would bloom into a disc; a soft ceiling keeps it a flame */
+}`;
 
 export function createPad({ renderer, small, dpr, spec }) {
   const scene = new THREE.Scene(); scene.background = new THREE.Color(0x020308); scene.fog = new THREE.FogExp2(0x24182a, 0.0017);   // the haze: the colour the near hills' foot is lost in
   const camera = new THREE.PerspectiveCamera(FOV, innerWidth / innerHeight, 0.5, 12000); scene.add(camera);
   const M = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.6, metalness: 0.1 }, o));
-  const porcelain = M(0xf0ece4, { roughness: 0.42 }), pink = M(0xff2d8d, { roughness: 0.4, emissive: 0x4a0a26 }), carbon = M(0x17181c, { roughness: 0.5, metalness: 0.5 }), steel = M(0x2a2d33, { roughness: 0.7, metalness: 0.6 });
+  const carbon = M(0x17181c, { roughness: 0.5, metalness: 0.5 }), steel = M(0x2a2d33, { roughness: 0.7, metalness: 0.6 });   // the mount and the tower (the rocket has its own, below)
   const add = (geo, mat, x = 0, y = 0, z = 0, parent = scene) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
   const box = (w, h, d, mat, x, y, z, parent) => add(new THREE.BoxGeometry(w, h, d), mat, x, y, z, parent);
   const cyl = (rt, rb, h, mat, x, y, z, parent, seg = 40, open = false) => add(new THREE.CylinderGeometry(rt, rb, h, seg, 1, open), mat, x, y, z, parent);
@@ -251,32 +285,148 @@ export function createPad({ renderer, small, dpr, spec }) {
   const padLight = new THREE.SpotLight(0xfff0e6, 1.1, 0, 0.55, 0.85, 0); padLight.position.set(30, 70, 46); padLight.target.position.set(0, 0, -6); scene.add(padLight, padLight.target);
   scene.add(new THREE.HemisphereLight(0x2c3552, 0x060607, 0.42)); const planetLight = new THREE.DirectionalLight(0xe8c6e6, 0.28); planetLight.position.set(0.4, 0.4, -0.8).normalize(); scene.add(planetLight);   // the planet's light, faintly pink
 
-  /* the rocket */
+  /* ───────── the rocket ─────────
+     A core stage and two side boosters, built the way the real ones are. Each body is turned on a lathe from its own
+     profile, each nose a tangent ogive; a carbon interstage joins the core's two stages; each booster is held on by a
+     forward attach fairing and by struts low down; carbon skirts close the engine bays, and under them hang metal engine
+     bells, three on the core and one on each booster, heat-tinted from the throat to the lip. The porcelain is paint under
+     a clear coat: its panels, ring welds, rivet rows, hatches and the soot of the landing burns are one painted skin and
+     its relief, which the clear coat follows too. What is of one material is one mesh. Units are metres, y up from the
+     mount. (The courier, courier.js, is this vehicle drawn in two dimensions: the same stations, bands and engines.) */
+  const R = 1.86, BR = 1.02, BX = 3.08, TIP = 44.7, BTIP = 24.1, THROAT = -0.35, EXIT = -1.6, SKIN = 45;   // the radii, where the boosters stand, the noses, the engines; how tall the skin is
   const rocket = new THREE.Group(); rocket.position.y = 2.2; scene.add(rocket);
-  const skin = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 1024; const x = c.getContext('2d'); x.fillStyle = '#f0ece4'; x.fillRect(0, 0, 512, 1024);
-    for (let i = 0; i < 1600; i++) { x.fillStyle = 'rgba(40,38,34,' + (rnd() * 0.035) + ')'; x.fillRect(rnd() * 512, rnd() * 1024, 2 + rnd() * 30, 1 + rnd() * 3); }
-    x.strokeStyle = 'rgba(30,28,26,.3)'; x.lineWidth = 2; for (let y = 64; y < 1024; y += 128) { x.beginPath(); x.moveTo(0, y); x.lineTo(512, y); x.stroke(); }
-    x.strokeStyle = 'rgba(30,28,26,.16)'; x.lineWidth = 1.5; for (let y = 0; y < 1024; y += 128) for (let k = 0; k < 4; k++) { const px = ((k + (y / 128 % 2) * 0.5) / 4) * 512; x.beginPath(); x.moveTo(px, y + 64); x.lineTo(px, y + 192); x.stroke(); }
-    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; t.anisotropy = 8; return t; })();
-  porcelain.map = skin; porcelain.color.set(0xffffff);
-  const lathe = (pts, mat) => add(new THREE.LatheGeometry(pts.map(p => new THREE.Vector2(p[0], p[1])), 56), mat, 0, 0, 0, rocket);
-  cyl(1.86, 1.98, 3, carbon, 0, 1.5, 0, rocket); cyl(1.86, 1.86, 31, porcelain, 0, 18.5, 0, rocket, 56); cyl(1.9, 1.9, 1.3, pink, 0, 23, 0, rocket, 56); cyl(1.9, 1.9, 0.35, carbon, 0, 31.4, 0, rocket, 56);
-  lathe([[1.86, 34], [1.8, 36], [1.6, 38.4], [1.28, 40.4]], porcelain); lathe([[1.28, 40.4], [0.92, 42.2], [0.5, 43.7], [0.16, 44.5], [0, 44.7]], pink);
-  [[0, 0.95], [-0.82, -0.47], [0.82, -0.47]].forEach(([x, z]) => cyl(0.34, 0.72, 1.7, carbon, x, -0.7, z, rocket, 24, true));
-  const boosters = [-1, 1].map(sx => { const g = new THREE.Group(); g.position.x = sx * 2.92; rocket.add(g);
-    cyl(1.02, 1.1, 2.2, carbon, 0, 1.1, 0, g); cyl(1.02, 1.02, 18, porcelain, 0, 11.2, 0, g, 40); cyl(1.05, 1.05, 0.9, pink, 0, 15.5, 0, g, 40);
-    add(new THREE.LatheGeometry([[1.02, 20.2], [0.86, 21.8], [0.5, 23.2], [0.12, 24], [0, 24.1]].map(p => new THREE.Vector2(p[0], p[1])), 40), pink, 0, 0, 0, g); cyl(0.3, 0.62, 1.5, carbon, 0, -0.6, 0, g, 20, true);
-    box(1, 0.3, 0.3, steel, -sx * 0.95, 5, 0, g); box(1, 0.3, 0.3, steel, -sx * 0.95, 17, 0, g); return g; });
-  /* the name down the side: drawn once the wordmark face has loaded */
-  const decalMat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
-  const decal = add(new THREE.CylinderGeometry(1.875, 1.875, 13.5, 32, 1, true, -0.52, 1.04), decalMat, 0, 13.6, 0, rocket); decal.rotation.y = 0.35; decal.visible = false;
-  const drawDecal = () => { const c = document.createElement('canvas'); c.width = 256; c.height = 1792; const x = c.getContext('2d'); x.translate(128, 896); x.rotate(-Math.PI / 2); x.font = '400 150px Michroma, "Arial Black", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#17181c'; x.fillText('FREEDOM', 0, 6);
+  for (let i = 0; i < 8000; i++) rnd();                          // the draws the old skin made, so the mist and the smoke after it fall where they always have
+  let rs = 20261121; const rr = () => { rs = (rs * 16807) % 2147483647; return (rs - 1) / 2147483646; };
+  const canvas2d = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; };
+  const dot = (x, px, py, r, fill, w) => { x.fillStyle = fill; for (const o of [0, -w, w]) { if (px + o < -r || px + o > w + r) continue; x.beginPath(); x.arc(px + o, py, r, 0, 7); x.fill(); } };
+  const band = (x, px, py, bw, bh, fill, w) => { x.fillStyle = fill; for (const o of [0, -w, w]) if (px + o + bw > 0 && px + o < w) x.fillRect(px + o, py, bw, bh); };
+  /* a relief (grey: raised is light) turned into a tangent-space normal map, in place; it wraps round the body */
+  const reliefToNormals = (x, w, h, k) => { const s = x.getImageData(0, 0, w, h).data, o = x.createImageData(w, h), d = o.data;
+    for (let y = 0; y < h; y++) { const yu = Math.max(0, y - 1) * w, yd = Math.min(h - 1, y + 1) * w, yr = y * w;
+      for (let i = 0; i < w; i++) { const dx = (s[(yr + (i + 1) % w) * 4] - s[(yr + (i + w - 1) % w) * 4]) / 255, dy = (s[(yd + i) * 4] - s[(yu + i) * 4]) / 255;
+        const nx = -dx * k, ny = dy * k, l = Math.hypot(nx, ny, 1), j = (yr + i) * 4; d[j] = (nx / l * 0.5 + 0.5) * 255; d[j + 1] = (ny / l * 0.5 + 0.5) * 255; d[j + 2] = (0.5 / l + 0.5) * 255; d[j + 3] = 255; } }
+    x.putImageData(o, 0, 0); };
+  const tex = (c, colour) => { const t = new THREE.CanvasTexture(c); if (colour) t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; t.anisotropy = 8; return t; };
+  /* the skin: u round the body from +z toward +x, v up it, SKIN metres (a booster wears the core's from 0.8 m up, so its
+     skirt meets the same rivet row). The core is laid out in barrels between ring welds, eight panels round, every other
+     ring turned half a panel and each panel a shade apart; rivet rows where the skirt, the interstage and the fairing join;
+     the fairing's split line, riveted each side; a few hatches, a vent; and the soot of the landing burns, low down */
+  const [skinCol, skinNrm] = (() => {
+    const w = small ? 256 : 512, h = w * 4, k = w / 512, px = w / (2 * Math.PI * R), [cc, c] = canvas2d(w, h), [rc, r] = canvas2d(w, h);
+    const Y = y => (1 - y / SKIN) * h, U = phi => ((phi / (2 * Math.PI)) % 1 + 1) % 1 * w;
+    c.fillStyle = '#f3f0ea'; c.fillRect(0, 0, w, h); r.fillStyle = '#808080'; r.fillRect(0, 0, w, h);
+    const RINGS = [3, 5.48, 7.96, 10.44, 12.92, 15.4, 17.88, 20.36, 22.84, 25.32, 27.8, 30.28, 32, 33.6];
+    for (let i = 0; i < RINGS.length - 1; i++) { const y0 = Y(RINGS[i]), y1 = Y(RINGS[i + 1]), off = i % 2 ? 0.5 : 0;
+      for (let j = 0; j < 8; j++) { const x0 = (j + off) / 8 * w;
+        band(c, x0, y1, w / 8, y0 - y1, rr() < 0.5 ? `rgba(92,80,68,${(0.014 + rr() * 0.026).toFixed(3)})` : `rgba(255,255,255,${(0.03 + rr() * 0.05).toFixed(3)})`, w);
+        band(r, x0 - 0.8 * k, y1, 1.6 * k, y0 - y1, '#585858', w); band(c, x0 - 0.5 * k, y1, k, y0 - y1, 'rgba(70,60,52,.16)', w); } }
+    for (const y of RINGS) { const yy = Y(y); r.fillStyle = '#505050'; r.fillRect(0, yy - 1.7 * k, w, 3.4 * k); r.fillStyle = '#c4c4c4'; r.fillRect(0, yy - 0.8 * k, w, 1.6 * k); c.fillStyle = 'rgba(70,60,52,.2)'; c.fillRect(0, yy - 0.6 * k, w, 1.2 * k); }
+    const rivets = y => { const n = Math.round(w / (0.16 * px)); for (let row = 0; row < 2; row++) for (let i = 0; i < n; i++) { const x = (i + row * 0.5) / n * w, yy = Y(y + (row - 0.5) * 0.07); dot(r, x, yy, 1.15 * k, '#dadada', w); dot(c, x, yy, 0.75 * k, 'rgba(80,70,60,.34)', w); } };
+    [3.14, 30.66, 32.16, 33.44, 33.76].forEach(rivets);
+    for (const phi of [-Math.PI / 3, Math.PI * 2 / 3]) { const x = U(phi); band(r, x - 1.1 * k, 0, 2.2 * k, Y(33.6), '#4c4c4c', w); band(c, x - 0.6 * k, 0, 1.2 * k, Y(33.6), 'rgba(70,60,52,.24)', w);   // the fairing's split line
+      for (let y = 33.8; y < 42.5; y += 0.17) for (const s of [-1, 1]) dot(r, x + s * 3.2 * k, Y(y), 0.95 * k, '#d4d4d4', w); }
+    [[-0.32, 4.4, 0.8, 0.55], [0.62, 6.15, 0.5, 0.5], [-0.95, 11.2, 0.6, 0.9], [0.18, 26.5, 0.7, 0.5], [0.45, 32.85, 0.55, 0.4], [2.6, 8, 0.6, 0.6], [3.7, 19, 0.7, 0.5]].forEach(([phi, y, hw, hh]) => {   // hatches
+      const x0 = U(phi) - hw * px / 2, y0 = Y(y + hh / 2), ww = hw * px, h2 = Y(y - hh / 2) - y0;
+      for (const o of [0, -w, w]) { r.strokeStyle = '#555'; r.lineWidth = 1.5 * k; r.strokeRect(x0 + o, y0, ww, h2); c.strokeStyle = 'rgba(70,60,52,.3)'; c.lineWidth = k; c.strokeRect(x0 + o, y0, ww, h2); }
+      for (const [fx, fy] of [[0.12, 0.15], [0.88, 0.15], [0.12, 0.85], [0.88, 0.85]]) { dot(r, x0 + ww * fx, y0 + h2 * fy, 1.1 * k, '#d8d8d8', w); dot(c, x0 + ww * fx, y0 + h2 * fy, 0.8 * k, 'rgba(70,60,52,.4)', w); } });
+    for (let i = 0; i < 4; i++) { const x0 = U(-0.15) - 0.15 * px, yy = Y(32.75 - i * 0.08); band(c, x0, yy, 0.3 * px, 1.4 * k, 'rgba(34,30,28,.55)', w); band(r, x0, yy, 0.3 * px, 1.4 * k, '#3c3c3c', w); }   // a vent
+    const soot = c.createLinearGradient(0, Y(3), 0, Y(8.5)); soot.addColorStop(0, 'rgba(54,42,40,.22)'); soot.addColorStop(0.35, 'rgba(54,42,40,.08)'); soot.addColorStop(1, 'rgba(54,42,40,0)'); c.fillStyle = soot; c.fillRect(0, Y(8.5), w, Y(3) - Y(8.5));
+    for (let i = 0; i < 46; i++) { const x = rr() * w, top = 3.4 + rr() * 5.5, g = c.createLinearGradient(0, Y(3), 0, Y(top)); g.addColorStop(0, 'rgba(50,40,38,.1)'); g.addColorStop(1, 'rgba(50,40,38,0)'); band(c, x, Y(top), (1 + rr() * 4) * k, Y(3) - Y(top), g, w); }
+    reliefToNormals(r, w, h, 2.4); return [tex(cc, true), tex(rc, false)]; })();
+  /* the carbon: stringers all the way round and a rivet row along each edge (v runs 0 to 1 over each part's height) */
+  const carbonNrm = (() => { const w = small ? 256 : 512, h = w / 8, k = w / 512, [cv, x] = canvas2d(w, h); x.fillStyle = '#808080'; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 64; i++) { const u = i / 64 * w; band(x, u - 1.5 * k, 0, 3 * k, h, '#a4a4a4', w); band(x, u + 1.5 * k, 0, k, h, '#666', w); }
+    for (const v of [0.12, 0.88]) for (let i = 0; i < 128; i++) dot(x, (i + 0.5) / 128 * w, v * h, 1.1 * k, '#d4d4d4', w);
+    reliefToNormals(x, w, h, 2); return tex(cv, false); })();
+  /* the bells: a regeneratively cooled wall, tubes all the way round */
+  const bellNrm = (() => { const w = 256, h = 8, [cv, x] = canvas2d(w, h); for (let i = 0; i < w; i++) { const v = Math.round(128 + 80 * Math.cos(i / w * Math.PI * 2 * 72)); x.fillStyle = `rgb(${v},${v},${v})`; x.fillRect(i, 0, 1, h); } reliefToNormals(x, w, h, 1.4); return tex(cv, false); })();
+  /* what the paint and the metal reflect: the night (a dark dome, warmer toward the horizon), the floodlights on their masts
+     and the light over the pad, and the planet's pink, high on the far side */
+  const env = (() => { const e = new THREE.Scene();
+    e.add(new THREE.Mesh(new THREE.SphereGeometry(60, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, vertexShader: SKY_VS,
+      fragmentShader: `varying vec3 vDir; void main(){ vec3 d = normalize(vDir); vec3 c = mix(vec3(0.05, 0.026, 0.045), vec3(0.008, 0.01, 0.026), smoothstep(0.0, 0.5, d.y)); gl_FragColor = vec4(mix(c, vec3(0.01, 0.01, 0.013), smoothstep(0.0, -0.08, d.y)), 1.0); }` })));
+    [[-82, 12, 12, 7, [9, 10, 12]], [66, 6, 48, 6, [8, 7, 6.5]], [44, 16, -58, 7, [10, 3.5, 6]], [30, 46, 46, 9, [5, 4.6, 4.3]], [0.4, 0.5, -0.75, 10, [0.9, 0.25, 0.55]]].forEach(([x, y, z, s, c]) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(s, s * 0.7), new THREE.MeshBasicMaterial({ color: new THREE.Color(...c), side: THREE.DoubleSide })); m.position.set(x, y, z).normalize().multiplyScalar(40); m.lookAt(0, 0, 0); e.add(m); });
+    const pm = new THREE.PMREMGenerator(renderer), t = pm.fromScene(e, 0.02).texture; pm.dispose(); e.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); return t; })();
+  /* a floodlight caught in the clear coat is a pinpoint far brighter than the paint round it, and the bloom would ring it
+     with a halo: past the paint's own brightness the light rolls off on a soft shoulder, so a glint stays a glint */
+  const tame = m => { m.onBeforeCompile = s => { s.fragmentShader = s.fragmentShader.replace('#include <opaque_fragment>',
+    'float pk = max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b)); if (pk > 0.9) outgoingLight *= (0.9 + 0.35 * (1.0 - exp((0.9 - pk) / 0.35))) / pk;\n#include <opaque_fragment>'); }; return m; };
+  const PH = o => tame(new THREE.MeshPhysicalMaterial(Object.assign({ envMap: env, envMapIntensity: 0.8, metalness: 0 }, o))), NS = s => new THREE.Vector2(s, s);
+  const paint = PH({ color: 0xffffff, map: skinCol, normalMap: skinNrm, normalScale: NS(0.55), roughness: 0.46, clearcoat: 1, clearcoatRoughness: 0.16, clearcoatNormalMap: skinNrm, clearcoatNormalScale: NS(0.4) });
+  const pinkPaint = PH({ color: 0xff2d8d, emissive: 0xff2d8d, emissiveIntensity: 0.05, normalMap: skinNrm, normalScale: NS(0.55), roughness: 0.4, clearcoat: 1, clearcoatRoughness: 0.14, clearcoatNormalMap: skinNrm, clearcoatNormalScale: NS(0.4) });
+  const carbonFibre = PH({ color: 0x121316, normalMap: carbonNrm, normalScale: NS(0.7), roughness: 0.5, metalness: 0.2, clearcoat: 0.5, clearcoatRoughness: 0.3, envMapIntensity: 1 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0x34373e, roughness: 0.45, metalness: 0.85, envMap: env });
+  const bellMat = tame(new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, metalness: 0.92, roughness: 0.3, normalMap: bellNrm, normalScale: NS(0.6), side: THREE.DoubleSide, envMap: env, envMapIntensity: 1.2 }));
+  const glowIn = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide, fog: false }), glowThroat = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false });
+  /* the parts, gathered by material and joined into one mesh each */
+  const byMat = new Map(), put = (mat, g) => { if (!byMat.has(mat)) byMat.set(mat, []); byMat.get(mat).push(g); return g; };
+  const S = small ? 48 : 80, BS = small ? 32 : 48;
+  /* a body of revolution from its profile ([radius, height], bottom to top, so its faces point out), v from the height */
+  const turn = (pts, seg, vOf) => { const g = new THREE.LatheGeometry(pts.map(p => new THREE.Vector2(p[0], p[1])), seg), p = g.attributes.position, uv = g.attributes.uv; if (vOf) for (let i = 0; i < p.count; i++) uv.setY(i, vOf(p.getY(i))); return g; };
+  const skinV = off => y => (y + off) / SKIN, partV = (y0, y1) => y => (y - y0) / (y1 - y0);
+  /* a tangent ogive of radius r from y0 to its tip at y1 (as a radius at a height), and a run of a profile, closer toward a tip */
+  const ogive = (r, y0, y1) => { const L = y1 - y0, rho = (r * r + L * L) / (2 * r); return y => Math.max(0, Math.sqrt(Math.max(0, rho * rho - (y - y0) * (y - y0))) + r - rho); };
+  const run = (f, ya, yb, n, tip) => Array.from({ length: n + 1 }, (_, i) => { const t = i / n, y = ya + (yb - ya) * (tip ? 1 - Math.pow(1 - t, 1.7) : t); return [f(y), y]; });
+  const ring = (r, y0, y1, d) => [[r - 0.004, y0], [r + d, y0 + 0.03], [r + d, y1 - 0.03], [r - 0.004, y1]];   // a band a little proud of the body, its edges turned down into it
+  /* an engine: its powerhead, a bell turned on a bell curve from the throat to the lip (heat-tinted: bronze at the throat,
+     blue and violet down the middle, pale at the lip), the glow inside it and at its throat when it burns */
+  const TINT = [[0, [0.56, 0.37, 0.25]], [0.45, [0.3, 0.24, 0.42]], [1, [0.72, 0.69, 0.64]]];
+  const bellGeo = (rt, re, len, n, colour) => { const pts = []; for (let i = 16; i >= 0; i--) { const u = i / 16; pts.push([rt + (re - rt) * Math.pow(u, 0.62), THROAT - u * len]); }
+    const g = turn(pts, n); if (!colour) { g.deleteAttribute('uv'); return g; } const p = g.attributes.position, col = new Float32Array(p.count * 3);
+    for (let i = 0; i < p.count; i++) { const u = (THROAT - p.getY(i)) / len, j = u < TINT[1][0] ? 0 : 1, a = TINT[j], b = TINT[j + 1], f = clamp((u - a[0]) / (b[0] - a[0])); for (let c = 0; c < 3; c++) col[i * 3 + c] = lerp(a[1][c], b[1][c], f); }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3)); return g; };
+  const engine = (x, z, rt, re) => { const len = THROAT - EXIT;
+    put(metal, new THREE.CylinderGeometry(rt * 1.2, rt * 1.45, 0.5, 16).translate(x, (THROAT + 0.15) / 2, z));
+    put(bellMat, bellGeo(rt, re, len, small ? 24 : 36, true).translate(x, 0, z)); put(glowIn, bellGeo(rt * 0.97, re * 0.97, len * 0.98, small ? 16 : 24, false).translate(x, 0, z));
+    put(glowThroat, new THREE.CircleGeometry(rt * 1.04, 16).rotateX(Math.PI / 2).translate(x, THROAT - 0.02, z).deleteAttribute('uv')); };
+  /* a rod from one point to another */
+  const rod = (a, b, r) => { const d = V().subVectors(b, a), g = new THREE.CylinderGeometry(r, r, d.length(), 8); g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(Y_UP, d.normalize())); return put(metal, g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2)); };
+
+  /* the core: the aft skirt over the engine bay, the first stage to the interstage, the second stage and the fairing, the nose */
+  const noseR = ogive(R, 34, TIP);
+  put(carbonFibre, turn([[1.97, 0], [1.975, 0.06], [1.95, 0.5], [R + 0.012, 2.94], [R, 3]], S, partV(0, 3)));
+  put(paint, turn([[R, 3], [R, 30.8]], S, skinV(0)));
+  put(carbonFibre, turn([[R, 30.8], [R + 0.024, 30.83], [R + 0.024, 31.97], [R, 32]], S, partV(30.8, 32)));
+  put(paint, turn([[R, 32], ...run(noseR, 34, 40.4, 12)], S, skinV(0)));
+  put(pinkPaint, turn(run(noseR, 40.4, TIP, 18, true), S, skinV(0)));
+  put(pinkPaint, turn(ring(R, 22.35, 23.65, 0.014), S, skinV(0)));
+  put(metal, new THREE.CircleGeometry(1.95, 48).rotateX(Math.PI / 2).translate(0, 0.14, 0));   // the base of the engine bay
+  const ENG = [[0, 0.95], [-0.8227, -0.475], [0.8227, -0.475]]; ENG.forEach(([x, z]) => engine(x, z, 0.21, 0.66));
+  /* a cable raceway up the first stage, and a short one past the interstage; its skin is the body's own column of it */
+  const PHI_RW = -0.78; [[3.2, 22.35], [22.35, 23.65, pinkPaint], [23.65, 30.7], [32.1, 33.5]].forEach(([y0, y1, mat]) => { const g = new THREE.BoxGeometry(0.22, y1 - y0, 0.07).translate(0, (y0 + y1) / 2, R + 0.03).rotateY(PHI_RW), p = g.attributes.position, uv = g.attributes.uv;
+    for (let i = 0; i < p.count; i++) uv.setXY(i, ((PHI_RW / (2 * Math.PI)) % 1 + 1) % 1, p.getY(i) / SKIN); put(mat || paint, g); });   // painted with the band where it crosses it
+  /* the boosters: skirt, body, band, nose and engine each, held to the core by a forward attach fairing and by struts low down */
+  for (const sx of [-1, 1]) { const x = sx * BX, bNose = ogive(BR, 20.2, BTIP), at = g => g.translate(x, 0, 0);
+    put(carbonFibre, at(turn([[1.1, 0], [1.1, 0.06], [1.08, 0.4], [BR + 0.008, 2.14], [BR, 2.2]], BS, partV(0, 2.2))));
+    put(paint, at(turn([[BR, 2.2], [BR, 20.2]], BS, skinV(0.8))));
+    put(pinkPaint, at(turn(run(bNose, 20.2, BTIP, 16, true), BS, skinV(0.8))));
+    put(pinkPaint, at(turn(ring(BR, 15.05, 15.95, 0.012), BS, skinV(0.8))));
+    put(metal, at(new THREE.CircleGeometry(1.06, 32).rotateX(Math.PI / 2).translate(0, 0.12, 0)));
+    engine(x, 0, 0.17, 0.56);
+    put(carbonFibre, new THREE.CapsuleGeometry(0.15, 0.5, 4, 12).rotateZ(Math.PI / 2).scale(1, 0.9, 1.6).translate(sx * (R + 0.1), 17.6, 0));
+    for (const z of [-1, 1]) rod(V(sx * 1.8, 3.5, z * 0.55), V(sx * 2.14, 4.6, z * 0.32), 0.045);
+    rod(V(sx * 1.8, 4.1, 0), V(sx * 2.14, 4.1, 0), 0.05); }
+  /* join each material's parts */
+  for (const [mat, list] of byMat) { const names = Object.keys(list[0].attributes), g = new THREE.BufferGeometry(), idx = []; let n = 0;
+    for (const nm of names) { const sz = list[0].attributes[nm].itemSize, arr = new Float32Array(list.reduce((s, q) => s + q.attributes[nm].count * sz, 0)); let o = 0; for (const q of list) { arr.set(q.attributes[nm].array, o); o += q.attributes[nm].count * sz; } g.setAttribute(nm, new THREE.BufferAttribute(arr, sz)); }
+    for (const q of list) { const c = q.attributes.position.count; if (q.index) for (const i of q.index.array) idx.push(i + n); else for (let i = 0; i < c; i++) idx.push(i + n); n += c; q.dispose(); }
+    g.setIndex(idx); g.computeBoundingSphere(); const m = add(g, mat, 0, 0, 0, rocket); if (mat === glowIn || mat === glowThroat) m.visible = false; }
+  const glows = rocket.children.filter(m => m.material === glowIn || m.material === glowThroat);
+  /* the name down the side: drawn once the wordmark face has loaded, under the same clear coat */
+  const decalMat = PH({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, roughness: 0.42, clearcoat: 1, clearcoatRoughness: 0.12 });
+  const decal = add(new THREE.CylinderGeometry(R + 0.004, R + 0.004, 13.5, 32, 1, true, -0.52, 1.04), decalMat, 0, 13.6, 0, rocket); decal.rotation.y = 0.35; decal.visible = false;
+  const drawDecal = () => { const c = document.createElement('canvas'); c.width = 256; c.height = 1792; const x = c.getContext('2d'); x.translate(128, 896); x.rotate(-Math.PI / 2); x.font = '400 150px Michroma, "Arial Black", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#101010'; x.fillText('FREEDOM', 0, 6);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; decalMat.map = t; decalMat.needsUpdate = true; decal.visible = true; };
   (document.fonts && document.fonts.load ? document.fonts.load('400 150px Michroma').then(drawDecal, drawDecal) : Promise.resolve().then(drawDecal));
 
-  /* flame, smoke, mist */
-  const flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 1.25, 2.0), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }), coreMat = flameMat.clone(); coreMat.color.setRGB(6, 5, 5.4);
-  const flames = [[0, 0, 1.25], [-2.92, 0, 0.8], [2.92, 0, 0.8]].flatMap(([x, z, r]) => { const o = add(new THREE.ConeGeometry(r, 15, 24, 1, true), flameMat, x, -9, z, rocket); o.rotation.x = Math.PI; const i = add(new THREE.ConeGeometry(r * 0.5, 9, 16, 1, true), coreMat, x, -6, z, rocket); i.rotation.x = Math.PI; return [o, i]; });
+  /* the flames: one volume for the core's three engines (they run together a little way down) and one for each booster's */
+  const steps = small ? 6 : spec && spec.lite ? 8 : 11;
+  const plume = (x, o) => { const LMAX = o.L0 * 1.6, g = new THREE.CylinderGeometry(o.RM, o.RM, LMAX, 20, 1, false); g.translate(0, LMAX / 2, 0); g.rotateX(Math.PI / 2);
+    const mat = new THREE.ShaderMaterial({ uniforms: { time: { value: 0 }, L: { value: o.L0 }, zMax: { value: LMAX }, RJ: { value: o.RJ }, RC: { value: o.RC }, RM: { value: o.RM }, spread: { value: o.spread }, power: { value: 0 }, seed: { value: rr() * 40 }, jet: { value: o.jets.map(j => new THREE.Vector2(j[0], j[1])) } },
+      vertexShader: PLUME_VS, fragmentShader: plumeFS(steps, o.jets.length), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide, fog: false });
+    const m = add(g, mat, x, EXIT + 0.05, 0, rocket); m.rotation.x = Math.PI / 2; m.renderOrder = 6; m.frustumCulled = false; m.visible = false; m.userData = { L0: o.L0, LMAX }; return m; };   // turned so its axis runs down
+  const plumes = [plume(0, { L0: 21, RJ: 0.55, RC: 1.2, RM: 4, spread: 0.8, jets: ENG }), ...[-1, 1].map(sx => plume(sx * BX, { L0: 16, RJ: 0.48, RC: 0.52, RM: 1.9, spread: 0.9, jets: [[0, 0]] }))];
   const fire = new THREE.PointLight(0xffa6cf, 0, 600, 1.1); fire.position.set(0, 3, 6); scene.add(fire);
   /* the engines seen from far off: one bright point under the rocket while it burns */
   const burn = new THREE.Sprite(new THREE.SpriteMaterial({ map: softDisc(128, [[0, 'rgba(255,246,250,1)'], [0.16, 'rgba(255,176,218,.5)'], [0.5, 'rgba(255,70,155,.1)'], [1, 'rgba(255,45,141,0)']]), color: new THREE.Color(2.2, 1.5, 1.9), transparent: true, opacity: 0, depthWrite: false, fog: false, blending: THREE.AdditiveBlending })); burn.position.set(0, -3.5, 0); burn.renderOrder = 8; rocket.add(burn);
@@ -389,7 +539,11 @@ export function createPad({ renderer, small, dpr, spec }) {
     }
     first = false;
     rocket.position.y = 2.2 + ry + hgt; rocket.rotation.z = lean; rocket.visible = T >= 0 || a > 0;
-    flames.forEach((f, i) => { f.material.opacity = (i % 2 ? 0.95 : 0.6) * thrust; f.visible = thrust > 0.01; const sy = (0.55 + thrust * 0.6) * (0.9 + 0.1 * Math.sin(time * 61 + i * 1.7)); f.scale.set(1, sy, 1); f.position.y = -(i % 2 ? 4.5 : 7.5) * sy - 0.8; });
+    /* the flames: longer the harder it burns, longer still on the climb, flickering; the mount stops them while it is low */
+    const lit2 = thrust > 0.01, flick = 0.94 + 0.04 * Math.sin(time * 37) + 0.02 * Math.sin(time * 23), floor = (rocket.position.y + EXIT - 2.2) / Math.max(0.5, Math.cos(lean));
+    plumes.forEach(p => { p.visible = lit2; if (!lit2) return; const u = p.material.uniforms; u.time.value = time; u.power.value = thrust * 2.4; u.zMax.value = floor;
+      u.L.value = Math.min(p.userData.LMAX - 0.05, p.userData.L0 * (0.55 + thrust * 0.6) * (T >= 0 ? 1.25 : 1) * flick); });
+    glowIn.color.setRGB(1.5, 0.5, 1.0).multiplyScalar(thrust * (0.92 + 0.08 * Math.sin(time * 53))); glowThroat.color.copy(glowIn.color).multiplyScalar(2.2); glows.forEach(m => { m.visible = lit2; });
     burn.material.opacity = thrust * 0.6; burn.visible = thrust > 0.01; burn.scale.setScalar(15 + 2.5 * Math.sin(time * 37));
     fire.intensity = thrust * (T >= 0 ? 420 : 300); fire.position.set(0, T >= 0 ? 3 + Math.min(ry, 40) : Math.max(3, hgt - 2), 6);
     const clear = T >= 0 ? T >= 0.15 : a < DOWN + 0.05;                                  // the service arms stand clear while the rocket is in the air
@@ -405,7 +559,7 @@ export function createPad({ renderer, small, dpr, spec }) {
     const lit = T >= 0 ? 0 : thrust * clamp(1 - hgt / 110);
     mist.forEach(m => { m.position.x += m.userData.v * dt; if (m.position.x > 190) m.position.x = -190; const nr = lit * clamp(1 - Math.hypot(m.position.x, m.position.z - 20) / 170); m.material.opacity = m.userData.o * (1 + nr * 3.2); m.material.color.copy(mistCold).lerp(mistWarm, nr); });
     /* where things are on the screen */
-    toPx(tv.set(0, rocket.position.y - 1.5, 0)); const bx = px.x, by = px.y; toPx(tv.set(0, rocket.position.y + 44.7, 0));
+    toPx(tv.set(0, rocket.position.y - 1.5, 0)); const bx = px.x, by = px.y; toPx(tv.set(0, rocket.position.y + TIP, 0));
     out.x = (bx + px.x) / 2; out.base = by; out.top = px.y; out.y = (by + px.y) / 2; out.h = Math.abs(by - px.y); out.k = a; out.onPad = T < 0 && a >= 1; out.down = g; out.dusk = dusk; out.vis = rocket.visible;
     if (g < 0.5) { out.y = -out.h; out.top = -out.h * 1.5; out.base = -out.h * 0.5; }           // the camera is still up in the sky: the rocket is somewhere above the frame
     toPx(planet.position); out.planetX = px.x; out.planetY = px.y;
@@ -415,5 +569,5 @@ export function createPad({ renderer, small, dpr, spec }) {
     reset() { T = -1; ry = 0; thrust = 0; done = null; for (const p of parts) p.life = 0; arms.forEach(a => { a.rotation.y = -1.2; }); first = true; },
     snap() { first = true; },
     setDpr(v) { stars.material.uniforms.pr.value = v; farLights.material.uniforms.pr.value = v; smokeMat.uniforms.px.value = H * v / (2 * TANH); },
-    warm() { flames.forEach(f => { f.visible = true; }); [burn, rocket, planet, birds, ...searches].forEach(o => { o.visible = true; }); renderer.compile(scene, camera); } };
+    warm() { [...plumes, ...glows, burn, rocket, planet, birds, ...searches].forEach(o => { o.visible = true; }); renderer.compile(scene, camera); } };
 }
