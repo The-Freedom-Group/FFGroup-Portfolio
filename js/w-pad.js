@@ -86,11 +86,13 @@ void main(){ float el = normalize(position).y; float tw = 1.0 + (0.14 + 0.32 * (
   vC = tint * k * smoothstep(low, low + 0.1, el) * tw; gl_PointSize = size * pr; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const STAR_FS = `varying vec3 vC; void main(){ float r = length(gl_PointCoord - 0.5) * 2.0; gl_FragColor = vec4(vC * exp(-r * r * 5.0) * (1.0 - smoothstep(0.8, 1.0, r)), 1.0); }`;
 const BEAM_VS = `varying vec3 vN; varying vec3 vV; varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`;
+/* (both beams are kept finite: where the view runs exactly along the cone's wall the sums can come out undefined, and one
+   such pixel, spread by the glow, used to put great white rings in the sky as the camera climbed with the rocket) */
 const BEAM_FS = `uniform vec3 colour; uniform float k; varying vec3 vN; varying vec3 vV; varying vec2 vUv;
-void main(){ float f = pow(abs(dot(normalize(vN), normalize(vV))), 2.4); float along = mix(0.16, 1.0, vUv.y * vUv.y); gl_FragColor = vec4(colour * k * f * along, 1.0); }`;
+void main(){ float f = pow(clamp(abs(dot(normalize(vN), normalize(vV))), 0.0, 1.0), 2.4); float y = clamp(vUv.y, 0.0, 1.0), along = mix(0.16, 1.0, y * y); gl_FragColor = vec4(clamp(colour * k * f * along, 0.0, 4.0), 1.0); }`;
 /* a searchlight's beam: brightest at the lamp, where the air is thickest, thinning away up the sky */
 const SEARCH_FS = `uniform vec3 colour; uniform float k; varying vec3 vN; varying vec3 vV; varying vec2 vUv;
-void main(){ float f = pow(abs(dot(normalize(vN), normalize(vV))), 1.6); gl_FragColor = vec4(colour * k * f * pow(vUv.y, 2.6), 1.0); }`;
+void main(){ float f = pow(clamp(abs(dot(normalize(vN), normalize(vV))), 0.0, 1.0), 1.6); float y = clamp(vUv.y, 0.0, 1.0); gl_FragColor = vec4(clamp(colour * k * f * pow(y, 2.6), 0.0, 4.0), 1.0); }`;
 const SKY_VS = `varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 /* the hills: each range takes the colour of the air in front of it, more of it the further off it is, and most in its valleys */
 const HILL_VS = `attribute vec2 aK; varying vec2 vK; varying vec3 vD; void main(){ vK = aK; vec4 w = modelMatrix * vec4(position, 1.0); vD = w.xyz - cameraPosition; gl_Position = projectionMatrix * viewMatrix * w; }`;

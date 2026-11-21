@@ -306,17 +306,32 @@ function placeMap() {
 
 /* ───────── liftoff ───────── */
 const loBtn = $('#liftoffBtn'), loCount = $('#loCount b'), loT = loCount.previousSibling || document.createTextNode(''); let launching = false;   // loT: the "T-" in front of the clock
+/* the way home: the page glides back up to the top, the whole story passing under it in reverse, eased in and out over a
+   few seconds (longer the further it has to go). A wheel, a touch or a key on the way hands the page back at once.
+   onStep(y) hears each step of the way */
+function glideTop(done, onStep) {
+  const y0 = scrollY;
+  if (STILL || y0 < 2) { scrollTo({ top: 0, behavior: 'auto' }); done(); return; }
+  const dur = clamp(1.8 + y0 / vh * 0.055, 2.4, 5.4) * 1000, t0 = performance.now(), EV = ['wheel', 'touchstart', 'keydown', 'pointerdown']; let stop = false;
+  const cancel = () => { stop = true; }, end = () => { EV.forEach(t => removeEventListener(t, cancel)); html.classList.remove('gliding'); done(); };
+  EV.forEach(t => addEventListener(t, cancel, { passive: true })); html.classList.add('gliding');
+  const step = now => { if (stop) { end(); return; }
+    const k = clamp((now - t0) / dur), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2, y = Math.round(y0 * (1 - e));
+    scrollTo({ top: y, behavior: 'instant' }); if (onStep) onStep(y); if (k < 1) requestAnimationFrame(step); else end(); };
+  requestAnimationFrame(step);
+}
 loBtn.addEventListener('click', async () => {
   if (launching) return; launching = true;
-  if (!GL || !world) { scrollTo({ top: 0, behavior: STILL ? 'auto' : 'smooth' }); launching = false; return; }
+  if (!GL || !world) { glideTop(() => { launching = false; }); return; }
   body.classList.add('launching'); if (sound) sound.countdown();
   for (let s = 3; s >= 1; s--) { loCount.textContent = '00:0' + s; await new Promise(r => setTimeout(r, 1000)); }
   loT.nodeValue = ''; loCount.textContent = 'LIFTOFF'; if (sound) sound.launch();
   await world.launch();                                        // the burn: resolves when the rocket is through the cloud
-  flash.style.background = '#F4F1EB'; flash.style.transition = 'opacity .5s'; flash.style.opacity = 1;
-  await new Promise(r => setTimeout(r, 520));
-  scrollTo({ top: 0, behavior: 'instant' }); syS = 0; world.arrive(); body.classList.remove('launching'); loT.nodeValue = 'T-'; loCount.textContent = '00:03';
-  await new Promise(r => setTimeout(r, 160)); flash.style.transition = 'opacity 1.4s'; flash.style.opacity = 0; launching = false;
+  /* then the page flies home to the top. The rocket is stood back on its pad once the pad is out of sight behind the glide */
+  body.classList.remove('launching');
+  let home = false; const arrive = () => { if (!home) { home = true; world.arrive(); } };
+  await new Promise(res => glideTop(res, y => { if (y + vh < byId.liftoff.top - 4) arrive(); }));
+  arrive(); loT.nodeValue = 'T-'; loCount.textContent = '00:03'; launching = false;
 });
 
 /* ───────── start ───────── */

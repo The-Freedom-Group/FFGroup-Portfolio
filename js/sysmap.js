@@ -63,8 +63,8 @@ export function initSystem({ byId, onStep }) {
   const words = Object.keys(TYPE).map((id, i) => { const g = $('#' + id).parentNode, w = document.createElementNS(NS, 'g'); g.parentNode.insertBefore(w, g); w.append(g);
     const [x, wd, base, ch] = TYPE[id], cx = x + wd / 2, cy = base - ch / 2; return { w, cx, cy, d: [0.03, 0.1, 0.16, 0.07][i], spin: -(2.3 + i * 0.35), last: -1 }; });
   /* the rocket on the first screen: the courier's own drawing, flying the mark's orbit, behind the globe as it passes it.
-     As the screen is pulled away it is pulled in too: round and round on a shrinking orbit, faster as it falls, stretched
-     along its way and burning hard, until it is gone into the hole (it comes out of the new planet after the nova) */
+     As the screen is pulled away it is pulled in too: round and round on a shrinking orbit, faster as it falls, burning
+     hard and growing smaller but never stretched, until it is swallowed whole by the hole (it comes out of the new planet after the nova) */
   const hrk = el('div.hero-rk', { 'aria-hidden': 'true' }), hpic = svg('svg', { viewBox: `${-ART.w / 2} -1 ${ART.w} ${ART.len + 2}`, class: 'rk burn' }, hrk), hflame = rocketArt(hpic, { trail: true });
   mark.append(hrk);
   const HR = { tr: '', op: -1, f: -1, clip: '', th0: 2.35 };
@@ -76,7 +76,7 @@ export function initSystem({ byId, onStep }) {
     const t = performance.now() / 1000, pe = clamp((bh - 0.03) / 0.8), fall = pe * pe, s = 1 - fall * 0.94;
     const th = STILL ? HR.th0 : HR.th0 - t * 0.34 - fall * 7.5 - pe * 1.2;          // a lap in about eighteen seconds; more turns the further it falls
     orbAt(th, s, mw, q0); orbAt(th - 0.03, s * (1 - 0.03 * (0.2 + pe * 2.4)), mw, q1);
-    const ang = Math.atan2(q1.y - q0.y, q1.x - q0.x), k = mw * 0.088 / 96, sx = k * (1 - 0.55 * fall), sy = k * (1 + 1.5 * fall);
+    const ang = Math.atan2(q1.y - q0.y, q1.x - q0.x), k = mw * 0.088 / 96, sx = k * (1 - 0.8 * fall), sy = sx;
     const tr = `translate3d(${q0.x.toFixed(1)}px,${q0.y.toFixed(1)}px,0) rotate(${(ang * 180 / Math.PI + 90).toFixed(2)}deg) scale(${sx.toFixed(4)},${sy.toFixed(4)})`;
     if (tr !== HR.tr) { HR.tr = tr; hrk.style.transform = tr; }
     const op = Math.round(clamp(1 - span(pe, 0.7, 0.93)) * 50) / 50; if (op !== HR.op) { HR.op = op; hrk.style.opacity = op; hrk.style.visibility = op < 0.02 ? 'hidden' : ''; }
@@ -174,20 +174,20 @@ export function initSystem({ byId, onStep }) {
     const sv = S.map; if (Math.abs(sv - (sysEl.__v || 0)) > 0.001 || sysEl.__v === undefined) { sysEl.__v = sv; sysEl.style.opacity = sv.toFixed(3); sysEl.style.visibility = sv < 0.004 ? 'hidden' : 'visible'; }
     if (sv > 0.004) reg.forEach(r => setOT(r, bv(r.beat)));
     const rd = bv(plan.head) > 0.5; if (rd !== ready) { ready = rd; board.classList.toggle('ready', rd); }
-    /* the first screen's parts fall in toward the hole: a winding path, stretched along the way in, each a moment after the last */
+    /* the first screen's parts fall in toward the hole: a winding path, each whole (smaller as it goes, never stretched), each a moment after the last */
     const bh = S.bh;
     parts.forEach(p => {
       const pe = clamp((bh - p.d) / (0.86 - p.d)); if (Math.abs(pe - p.last) < 0.0008) return; p.last = pe; const st = p.node.style;
       if (pe <= 0) { st.transform = ''; st.opacity = ''; return; }
       const pe2 = pe * pe, ang0 = Math.atan2(p.y0, p.x0), dist = Math.hypot(p.x0, p.y0), th = ang0 + p.spin * pe2 * 0.55, rr = dist * (1 - pe2 * 0.9);
-      st.transform = `translate3d(${(Math.cos(th) * rr - p.x0).toFixed(1)}px,${(Math.sin(th) * rr - p.y0).toFixed(1)}px,0) rotate(${(th - ang0).toFixed(3)}rad) scale(${((1 - pe2) * (1 + 0.5 * pe)).toFixed(4)},${((1 - pe2) * (1 - 0.3 * pe)).toFixed(4)})`;
+      st.transform = `translate3d(${(Math.cos(th) * rr - p.x0).toFixed(1)}px,${(Math.sin(th) * rr - p.y0).toFixed(1)}px,0) rotate(${(th - ang0).toFixed(3)}rad) scale(${(1 - pe2).toFixed(4)})`;
       st.opacity = clamp(1 - (pe - 0.62) * 3.2).toFixed(3);
     });
     words.forEach(q => {
       const pe = clamp((bh - q.d) / (0.84 - q.d)); if (Math.abs(pe - q.last) < 0.0008) return; q.last = pe;
       if (pe <= 0) { q.w.removeAttribute('transform'); q.w.style.opacity = ''; return; }
       const pe2 = pe * pe, x0 = q.cx - HOLE[0], y0 = q.cy - HOLE[1], ang0 = Math.atan2(y0, x0), th = ang0 + q.spin * pe2 * 0.55, rr = Math.hypot(x0, y0) * (1 - pe2 * 0.96);
-      q.w.setAttribute('transform', `translate(${(HOLE[0] + Math.cos(th) * rr).toFixed(1)} ${(HOLE[1] + Math.sin(th) * rr).toFixed(1)}) rotate(${((th - ang0) * 180 / Math.PI).toFixed(2)}) scale(${((1 - pe2) * (1 + 0.4 * pe)).toFixed(4)} ${((1 - pe2) * (1 - 0.3 * pe)).toFixed(4)}) translate(${(-q.cx).toFixed(1)} ${(-q.cy).toFixed(1)})`);
+      q.w.setAttribute('transform', `translate(${(HOLE[0] + Math.cos(th) * rr).toFixed(1)} ${(HOLE[1] + Math.sin(th) * rr).toFixed(1)}) rotate(${((th - ang0) * 180 / Math.PI).toFixed(2)}) scale(${(1 - pe2).toFixed(4)}) translate(${(-q.cx).toFixed(1)} ${(-q.cy).toFixed(1)})`);
       q.w.style.opacity = clamp(1 - (pe - 0.6) * 3).toFixed(3);
     });
     if (bh < 0.9995) heroRocket(bh);

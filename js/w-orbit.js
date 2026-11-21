@@ -188,6 +188,7 @@ export function createOrbit({ renderer, small, dpr, spec }) {
       const ra = Math.hypot(qa.x - o.x, qa.y - o.y), rb = Math.hypot(qb.x - o.x, qb.y - o.y); o.r = ra;
       out.lens.u = o.x / W; out.lens.v = 1 - o.y / H; out.lens.r = Math.max(2, ra) / H; out.lens.e = clamp(rb / Math.max(1, ra), 0.05, 1); out.lens.a = Math.atan2(-(qa.y - o.y), qa.x - o.x);
       out.lens.k = smooth(span(bh, 0.06, 0.46)) * (1 - span(bh, 0.95, 1));
+      out.lens.z = camera.position.distanceTo(rig.position) + rig.scale.x * 1.4;   /* everything nearer than this is the mark (the globe, the bodies, the ring): kept whole by the lens */
     }
     out.heroOk = false;                                                   // the first screen's own sheet no longer moves: its parts fall in one by one (sysmap.js)
 

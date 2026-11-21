@@ -122,7 +122,8 @@ const MARGIN = ['traction', 'market', 'plan', 'horizon', 'crew', 'beyond'];   //
 const ease3 = t => { t = clamp(t); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };   // the dive's own ease (w-orbit.js)
 const ease5 = t => { t = clamp(t); return t * t * t * (t * (t * 6 - 15) + 10); };                           // the new planet's (sysmap.js)
 /* a figure's timing over its stretch of the scroll, 0 to 1: it enters and leaves at EDGE of its cruising pace */
-const EDGE = 0.65, timing = q => { q = clamp(q); const q2 = q * q, q3 = q2 * q; return 3 * q2 - 2 * q3 + EDGE * (2 * q3 - 3 * q2 + q); };
+const EDGE = 0.65;
+export const timing = q => { q = clamp(q); const q2 = q * q, q3 = q2 * q; return 3 * q2 - 2 * q3 + EDGE * (2 * q3 - 3 * q2 + q); };
 /* the soft fence: the last FENCE px before an edge are mapped onto a curve that never reaches it; further in nothing
    changes, and where the curve begins its value and slope match, so a route through it stays smooth */
 const FENCE = 44, softIn = d => d >= FENCE ? d : FENCE * Math.exp(d / FENCE - 1);
@@ -294,7 +295,7 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
      fx, fy, the way it faces where the route itself barely moves (added to the route's own direction, so it only counts
      at a near standstill); free, how far it may leave the screen; hx, hy, hr, a disc it is behind; cut, a line it is not
      shown above. Each is a function of s and of the layout (a live one also of the world as it is drawn), never of time. */
-  let W = null, ROOMS = {}, CL = 40, route = [], rides = [], stops = [], laid = [];
+  let W = null, ROOMS = {}, CL = 40, route = [], rides = [], stops = [], laid = [], flyP = null;
   const RID = ['rev', 'traj', 'plan', 'fly'], Q = { x: 0, y: 0 }, Q2 = { x: 0, y: 0 }, NONE = {};
   const look = (o, len, a = 1, g = 0, face = DOWN, phi = 0.08, free = 0) => { o.len = len; o.a = a; o.g = g; o.fr = g; o.gy = NaN; o.fx = Math.cos(face) * phi; o.fy = Math.sin(face) * phi; o.free = free; o.cut = 0; o.hr = 0; return o; };
   const behind = (o, x, y, r) => { o.hx = x; o.hy = y; o.hr = r; };
@@ -330,7 +331,7 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
 
   /* the whole flight, from the new planet to liftoff, in story order */
   function lay() {
-    laid = RID.map(id => RIDES[id] && RIDES[id].svg); CL = phone ? 30 : clamp(vw * 0.027, 34, 46);
+    laid = RID.map(id => RIDES[id] && RIDES[id].svg); CL = phone ? 30 : clamp(vw * 0.027, 34, 46); flyP = null;
     const seq = [];
     /* 01 · the system. Out of the new planet after the nova and round it close while the map builds, in behind it as
        the map stands, out again on the patrol, and on into Freedom Global ahead of the dive */
@@ -459,13 +460,18 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
         seq.push(pin, hubP, out); } }
     /* 09 · the raise */
     if (raise) seq.push(raise);
-    /* 10: into the left margin, across under the heading, round the flywheel (each stop it passes is the step the story
-       is on), and back across under the scenarios */
+    /* 10: into the left margin, across under the heading, round the flywheel while it holds on the screen (each stop it
+       passes is the step the story is on), and back across under the scenarios */
     seq.push(lane('beyond', 0));
     { const h = docBox($('#beyond .sh')), g = docBox($('#beyond .by-grid')); if (h && g) seq.push(seam(h[3], g[1], 'beyond', 0, 'beyond', 1)); }
     seq.push(lane('beyond', 1));
-    { const FW = RIDES.fly, ps = FW && svgAt(FW.svg);
-      if (ps) { const [ox, oy, k0] = ps, cx = ox + FW.size / 2 * k0, cy = oy + FW.size / 2 * k0, step = TAU / FW.n;
+    { const FW = RIDES.fly, pin = FW && FW.pin && FW.pin(), ps = FW && !(pin && pin.on) && svgAt(FW.svg);
+      if (pin && pin.on) {      /* the wheel holds still on the screen over the pin's stretch of scroll: once round its ring, from the first stop at the top */
+        const P = phase('flywheel', function (s, o) { const t = UP + TAU * timing(qOf(this, s)); o.x = pin.cx + Math.cos(t) * pin.r; o.y = pin.cy + Math.sin(t) * pin.r; look(o, CL, 1, 0); }, { abs: true, dlen: TAU * pin.r });
+        P.s0 = pin.s0; P.s1 = pin.s1;
+        P.stop = s => { if (s < P.s0 - vh || s > P.s1 + vh) return; FW.at(s <= P.s0 ? 0 : s >= P.s1 ? FW.n - 1 : Math.min(FW.n - 1, Math.floor(timing(qOf(P, s)) * FW.n))); };
+        stops.push(P); seq.push(P); flyP = P; }
+      else if (ps) { const [ox, oy, k0] = ps, cx = ox + FW.size / 2 * k0, cy = oy + FW.size / 2 * k0, step = TAU / FW.n;
         const P = pageOrbit('flywheel', { x: cx, y: cy, rx: FW.r * k0, ry: FW.r * k0, th0: 0, turns: 1, cw: true }); P.s0 = at(cy, 0.84); P.s1 = at(cy, 0.2);
         let was = -1; P.stop = s => { if (s <= P.s0 || s >= P.s1) return; const t = TAU * timing(qOf(P, s)), i = Math.floor((t + PI / 2) / step + 1e-6); if (i !== was) { was = i; FW.at(i); } };
         stops.push(P); seq.push(P); } }
@@ -665,6 +671,7 @@ export function createCourier({ byId, sys, mapSpan = [0.44, 0.895] }) {
     let again = dirty; if (again) why = 'layout'; else for (let i = 0; i < RID.length; i++) { const r = RIDES[RID[i]]; if ((r && r.svg) !== laid[i]) { again = true; why = 'figure ' + RID[i]; break; } }     /* a figure drawn (or drawn again at a new size) */
     if (watchWorld(world)) again = true;
     if (again) relay();
+    if (RIDES.fly) RIDES.fly.byCourier = !STILL && !!world && !!sys && !!flyP;      /* the flywheel's steps are lit by the courier where it flies round it, else by the scroll (charts.js) */
     if (STILL || !world || !sys) { flatFrame(sy); return; }
     /* the eased scroll: the same lowpass as the world's, so the two never part; a jump of more than two and a half
        screens is taken at once */

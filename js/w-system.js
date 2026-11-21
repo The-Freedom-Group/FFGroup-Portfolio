@@ -14,8 +14,9 @@ import * as THREE from 'three';
 const DEG = Math.PI / 180;
 export const SYS_EL = 14 * DEG;                                      // how far above the plane of the rings the system is seen from
 /* each ring's far side, as a height above the middle of Enterprise in Enterprise radii: every ring runs through the globe
-   (as the orbit does in the logo), each a shade further back than the one inside it so no two ever cross */
-const APEX = [0, 0.03, 0.06, 0.09, 0.12];
+   (as the orbit does in the logo), each further back than the one inside it, enough that their far sides stand apart
+   behind it as their near sides do in front (never crossing, never bunched into one line) */
+const APEX = [0, 0.15, 0.3, 0.45, 0.6];
 /* the year each ring stands for. Its mark sits on the ring beside the ring's own company: this far along the ring from
    the world on the screen, in Enterprise radii (Global's to the right; a plus is away from the front, a minus toward it) */
 export const YEARS = [['2026', 1.55], ['2027', 1.75], ['2028', 1.75], ['2029', -2.0], ['2030+', -2.05]];

@@ -68,7 +68,8 @@ main{position:relative;z-index:1}
 .sh.sub h3{font-family:var(--disp);font-weight:400;text-transform:uppercase;font-size:clamp(1.7rem,3vw,2.7rem);line-height:1;margin-top:.5em}
 .fine{font-size:.8rem;line-height:1.5;color:var(--fg3);max-width:74ch}
 .fine b{color:var(--fg2);font-weight:600}
-.fine a{color:var(--fg);border-bottom:1px solid var(--hot);padding-bottom:1px;white-space:nowrap}
+.fine a{color:var(--fg);border-bottom:1px solid var(--hot);padding-bottom:1px;white-space:nowrap;position:relative}
+.fine a::after{content:"";position:absolute;inset:-12px -4px}
 
 /* ───────── buttons, pills ───────── */
 .btn{display:inline-flex;align-items:center;gap:.8em;font:500 12px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;padding:16px 24px;border-radius:999px;border:1px solid var(--fg);color:var(--fg);background:transparent;transition:background .25s var(--ease),color .25s var(--ease),border-color .25s}
@@ -122,6 +123,9 @@ body.launching #nav{transform:translateY(-110%)}
 body.launching #rail{transform:translate(160%,-50%)}
 .nv-brand{display:flex;align-items:center;gap:11px;flex:none}
 .nv-brand img{width:30px;height:30px}
+/* small things people tap get a bigger, unseen hit area (44px or near it), so a thumb never misses them */
+.nv-brand{position:relative}
+.nv-brand::after{content:"";position:absolute;inset:-8px}
 .nv-word{font:400 12px/1 var(--logo);letter-spacing:.04em;white-space:nowrap}
 .nv-word i{font-style:normal;opacity:.6}
 /* where the reader is: the part's number and name. A long name takes a second line before it is ever cut short. */
@@ -342,12 +346,12 @@ html.no-gl .mark-flat{display:block}
   html.gl .sys-stats b{font:400 1.55em/1 var(--disp);display:block;color:var(--c)}
   html.gl .sys-stats span{font:500 .72em/1.28 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg);display:block;margin-top:.55em}
   html.gl .sys-stats i{font-style:normal;font-size:.98em;line-height:1.3;color:var(--fg3);display:block;margin-top:.45em}
-  /* where each world stands, and how big */
+  /* where each world stands, and how big: placed so the five rings through them are evenly spaced */
   html.gl .co[data-co="enterprise"]{--x:64em;--y:13.6em;--r:5em}
   html.gl .co[data-co="global"]{--x:64em;--y:25em;--r:3.25em}
-  html.gl .co[data-co="facilities"]{--x:36.6em;--y:25.8em;--r:3.1em}
-  html.gl .co[data-co="distribution"]{--x:92.4em;--y:28em;--r:3em}
-  html.gl .co[data-co="future29"]{--x:40em;--y:42.6em;--r:2.8em;--rw:6.8em}
+  html.gl .co[data-co="facilities"]{--x:39.2em;--y:25.2em;--r:3.1em}
+  html.gl .co[data-co="distribution"]{--x:94.4em;--y:29.8em;--r:3em}
+  html.gl .co[data-co="future29"]{--x:45.4em;--y:40em;--r:2.8em;--rw:6.8em}
   html.gl .co[data-co="future30"]{--x:88.6em;--y:44.8em;--r:2.7em;--rw:6em}
   /* what is written beside it */
   html.gl .fam{position:absolute;display:grid;gap:.6em;width:var(--w);align-content:start}
@@ -401,7 +405,8 @@ html.no-gl .mark-flat{display:block}
 
 /* the narrow map: the worlds in a column, one card at a time */
 @media (max-width:1099.98px),(max-height:559.98px){
-  /* the worlds stand between the heading (--mt, measured) and the room kept for the card and the note (--mb) */
+  /* the worlds stand between the heading (--mt, measured) and the room kept for the card and the note (--mb); their
+     heights are set so the five rings through them stand evenly apart, as on the wide map */
   html.gl .sys-board{container-type:size;--mb:308px;--mh:max(190px,calc(100cqh - var(--mt,24cqh) - var(--mb)))}
   html.gl .for-wide{display:none}
   html.gl .for-small{display:inline}
@@ -413,12 +418,14 @@ html.no-gl .mark-flat{display:block}
   html.gl .co[data-co="enterprise"]{--x:50cqw;--y:calc(var(--mt,24cqh) + var(--mh) * .143);--r:calc(var(--mh) * .0804)}
   html.gl .co[data-co="global"]{--x:50cqw;--y:calc(var(--mt,24cqh) + var(--mh) * .363);--r:calc(var(--mh) * .049)}
   html.gl .co[data-co="facilities"]{--x:max(14cqw,50cqw - var(--mh) * .336);--y:calc(var(--mt,24cqh) + var(--mh) * .42);--r:calc(var(--mh) * .0452)}
-  html.gl .co[data-co="distribution"]{--x:min(86cqw,50cqw + var(--mh) * .36);--y:calc(var(--mt,24cqh) + var(--mh) * .455);--r:calc(var(--mh) * .0427)}
-  html.gl .co[data-co="future29"]{--x:max(20cqw,50cqw - var(--mh) * .247);--y:calc(var(--mt,24cqh) + var(--mh) * .646);--r:calc(var(--mh) * .0427);--rw:calc(var(--mh) * .1055)}
+  html.gl .co[data-co="distribution"]{--x:min(86cqw,50cqw + var(--mh) * .36);--y:calc(var(--mt,24cqh) + var(--mh) * .51);--r:calc(var(--mh) * .0427)}
+  html.gl .co[data-co="future29"]{--x:max(20cqw,50cqw - var(--mh) * .247);--y:calc(var(--mt,24cqh) + var(--mh) * .612);--r:calc(var(--mh) * .0427);--rw:calc(var(--mh) * .1055)}
   html.gl .co[data-co="future30"]{--x:min(80cqw,50cqw + var(--mh) * .217);--y:calc(var(--mt,24cqh) + var(--mh) * .705);--r:calc(var(--mh) * .0402);--rw:calc(var(--mh) * .0955)}
   html.gl .slot{left:calc(var(--x) - max(var(--rw,var(--r)),22px));top:calc(var(--y) - max(var(--r),22px));width:calc(max(var(--rw,var(--r)),22px) * 2);height:calc(max(var(--r),22px) * 2)}
-  html.gl .lb{display:grid;justify-items:center;gap:2px;position:absolute;left:var(--x);top:calc(var(--y) + var(--r) + 4px);transform:translateX(-50%);font:600 9.5px/1.15 var(--sans);color:var(--fg);text-align:center;white-space:nowrap;padding:2px 4px;transition:opacity .4s var(--ease)}
+  /* centred under its world, but never past the screen's edge on the smallest phones */
+  html.gl .lb{display:grid;justify-items:center;gap:2px;position:absolute;left:var(--x);top:calc(var(--y) + var(--r) + 4px);transform:translateX(clamp(calc(8px - var(--x)), -50%, calc(100cqw - 8px - var(--x) - 100%)));font:600 9.5px/1.15 var(--sans);color:var(--fg);text-align:center;white-space:nowrap;padding:2px 4px;transition:opacity .4s var(--ease)}
   html.gl .lb .tag{font-size:7.5px;padding:3px 6px;margin-top:1px}
+  html.gl .lb::after{content:"";position:absolute;inset:-7px -3px}
   html.gl .co[data-co="enterprise"] .lb{top:auto;bottom:calc(100cqh - var(--y) + var(--r) + 6px);font:400 13px/1.1 var(--disp);letter-spacing:.06em;text-transform:uppercase}
   html.gl .co.dim .lb{opacity:.4}
   html.gl .fam{position:absolute;left:var(--gut);right:var(--gut);bottom:calc(62px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr 1fr;gap:6px;opacity:0;visibility:hidden;transform:translateY(10px);transition:opacity .35s var(--ease),transform .4s var(--ease),visibility 0s .35s;font-size:10px}
@@ -913,6 +920,7 @@ html.gl #map.live::after{display:none}
 .xm-pin{--c:var(--pink);position:absolute;left:0;top:0;width:24px;height:30px;display:grid;justify-items:center;align-items:end;opacity:0;pointer-events:auto;will-change:transform,opacity}
 .xm-pin.primary{--c:var(--o-mint)}
 .xm-pin.on{z-index:2}
+.xm-pin::after{content:"";position:absolute;inset:-8px -10px -4px}
 .xm-pin svg{width:18px;height:24px;overflow:visible;transform-origin:50% 97%;transition:transform .3s var(--ease)}
 .xm-pin.on svg{transform:scale(1.24)}
 .xm-pin path{fill:var(--c);stroke:#fff;stroke-width:1.1;stroke-linejoin:round}
@@ -1406,6 +1414,12 @@ html.no-gl #liftoff{background:linear-gradient(#0d0e17 30%,#171222 78%,#3a1a33)}
 .by-cos img{width:clamp(46px,4.2vw,58px);height:auto;aspect-ratio:1;border-radius:50%;flex:none;background:var(--c)}
 .by-cos b{font:400 clamp(1.14rem,1.6vw,1.46rem)/1.05 var(--disp);text-transform:uppercase;letter-spacing:.022em}
 .by-cos b span{display:block;font:500 9.5px/1 var(--mono);letter-spacing:.2em;color:var(--fg2);margin-bottom:6px}
+/* the flywheel holds on the screen while the scroll turns it (charts.js sets where it holds and for how long; none when the motion is reduced) */
+.fly-pin{position:relative;display:flow-root}
+.fly-pin .fly{position:sticky;top:var(--fly-top,0px);z-index:1}
+.fly-run{height:var(--fly-run,0px)}
+html.still .fly-pin .fly{position:relative;top:auto}
+html.still .fly-run{display:none}
 .fly{margin-top:18px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,27.5rem);gap:26px clamp(24px,4vw,64px);align-items:center}
 .fly-steps{counter-reset:f;border-bottom:1px solid var(--line)}
 .fly-steps li{counter-increment:f;display:grid;grid-template-columns:2.6em 1fr;align-items:baseline;padding:13px 0;border-top:1px solid var(--line);font:400 clamp(1.02rem,1.3vw,1.2rem)/1.15 var(--disp);text-transform:uppercase;letter-spacing:.02em;color:var(--fg2);transition:color .4s;cursor:default}

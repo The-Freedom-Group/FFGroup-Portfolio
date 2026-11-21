@@ -7,7 +7,7 @@
    the last point: each line is handed to it in RIDES (its shape, and a way to show it drawn so far), and so are the
    tops of the plan's columns and the flywheel's stops. Without the courier a line draws itself in once it is seen. */
 import { $, $$, el, svg, clamp, lerp, easeOut, easeInOut, fmtCompact, fmtGBP, onSeen, STILL } from './kit.js';
-import { RIDES, lineAt } from './courier.js';
+import { RIDES, lineAt, timing } from './courier.js';
 
 /* fixed order and colour for every channel: six marketplaces, then the two direct channels */
 export const CHANNELS = [
@@ -423,19 +423,46 @@ function flywheel() {
     if (w) { svg('circle', { r: 23.5, fill: w[2] }, g); const im = svg('image', { href: `assets/minis/${w[1]}@2x.webp`, x: -25, y: -25, width: 50, height: 50 }, g); im.addEventListener('error', () => im.remove(), { once: true }); svg('circle', { r: 31, class: 'halo' }, g); }
     else { svg('circle', { r: 15, class: 'hit' }, g); svg('circle', { r: 6, class: 'dot' }, g); }
     const off = w ? 49 : 27; svg('text', { x: (cx * off).toFixed(1), y: (cy * off + 4).toFixed(1), 'text-anchor': 'middle' }, g, two(i));
-    g.addEventListener('pointerenter', () => { set(i); hold = performance.now(); }); return g; });
+    g.addEventListener('pointerenter', e => pointed(e, i)); return g; });
   let cur = -1, turn = 0, hold = 0, timer = 0;
+  /* pointing at a step lights it, but only when the pointer itself has moved: a step the scroll carries under a resting
+     pointer must not take the light from the step the story is on */
+  let mx = -1, my = -1, movedAt = -1e9, hoverAt = -1e9;
+  addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && (e.clientX !== mx || e.clientY !== my)) { mx = e.clientX; my = e.clientY; movedAt = performance.now(); } }, { passive: true });
+  function pointed(e, i) { if (e.pointerType === 'mouse' && performance.now() - movedAt > 250) return; set(i); hold = hoverAt = performance.now(); }
+  const story = i => { if (i !== cur && performance.now() - hoverAt > 800) { set(i); hold = performance.now(); } };   /* the step the story is on, unless one has just been pointed at */
   function set(i) {
     if (i === cur) return; let d = cur < 0 ? i : i - cur; if (d > n / 2) d -= n; if (d < -n / 2) d += n; turn += d; cur = i;       // the short way round, and never back through the start
     steps.forEach((li, k) => li.classList.toggle('on', k === i)); stops.forEach((g, k) => g.classList.toggle('on', k === i));
     big.textContent = two(i); said.forEach((t, k) => { t.textContent = lines[i][k] || ''; }); arc.style.transform = `rotate(${-90 + (turn - 1) * 360 / n}deg)`;
   }
-  steps.forEach((li, i) => li.addEventListener('pointerenter', () => { set(i); hold = performance.now(); }));
-  /* the courier rides round the ring: each stop it passes is the step the story is on, and the wheel waits while it rides */
-  RIDES.fly = { svg: s, size: S, r: R, n, at(i) { set(((i % n) + n) % n); hold = performance.now(); } };
-  set(0);
+  steps.forEach((li, i) => li.addEventListener('pointerenter', e => pointed(e, i)));
+  /* the wheel holds on the screen for a stretch of scroll (the pin, held by the page's own sticky), and the scroll turns
+     it: a step for each sixth of the way round. Where it holds: the whole panel in the middle of the room under the bar
+     if it fits, else the wheel itself in the middle (the panel's top or foot never pulled into the room). The courier,
+     where it flies here, rides round the ring over the same stretch and lights each stop as it passes; elsewhere the
+     scroll lights them itself */
+  const pinEl = $('#flyPin'), panel = fig.closest('.fly'), pin = { on: false, s0: 0, s1: 0, top: 0, cx: 0, cy: 0, r: 0 }; let pinKey = '';
+  function pinNow() {
+    if (!pinEl || !panel || STILL) { pin.on = false; return pin; }
+    const vw = innerWidth, vh = innerHeight, navH = ($('#nav') || {}).offsetHeight || 64, ph = panel.offsetHeight, key = [vw, vh, navH, ph, fig.offsetWidth, pinEl.offsetTop].join();
+    if (key === pinKey) return pin; pinKey = key;
+    let fx = 0, fy = 0, q = fig; while (q && q !== panel) { fx += q.offsetLeft; fy += q.offsetTop; q = q.offsetParent; }
+    const wx = fx + fig.offsetWidth / 2, wy = fy + fig.offsetHeight / 2, avail = vh - navH;
+    const top = ph <= avail - 24 ? navH + (avail - ph) / 2 : clamp(navH + avail / 2 - wy, vh - ph - 12, navH + 12), run = Math.round(vh * (vw < 900 ? 1.25 : 1.5));
+    pinEl.style.setProperty('--fly-top', top.toFixed(1) + 'px'); pinEl.style.setProperty('--fly-run', run + 'px');
+    let px = pinEl.offsetLeft, py = pinEl.offsetTop; q = pinEl.offsetParent; while (q) { px += q.offsetLeft + q.clientLeft; py += q.offsetTop + q.clientTop; q = q.offsetParent; }   // where it stands on the page when not held
+    py += parseFloat(getComputedStyle(panel).marginTop) || 0;
+    Object.assign(pin, { on: true, top, s0: py - top, s1: py - top + run, cx: px + panel.offsetLeft + wx, cy: top + wy, r: R * fig.offsetWidth / S }); return pin;
+  }
+  const scrollStep = () => { if (!pinNow().on || RIDES.fly.byCourier) return; const q = (scrollY - pin.s0) / Math.max(1, pin.s1 - pin.s0); story(q <= 0 ? 0 : q >= 1 ? n - 1 : Math.min(n - 1, Math.floor(timing(q) * n))); };
+  RIDES.fly = { svg: s, size: S, r: R, n, pin: pinNow, byCourier: false, at(i) { story(((i % n) + n) % n); } };
+  set(0); pinNow();
   if (STILL) { steps.forEach(li => li.classList.add('on')); return; }
-  const tick = () => { if (performance.now() - hold > 5000) set((cur + 1) % n); };
+  addEventListener('scroll', scrollStep, { passive: true }); addEventListener('resize', () => { pinKey = ''; scrollStep(); });
+  if ('ResizeObserver' in window) new ResizeObserver(() => { pinKey = ''; pinNow(); }).observe(panel || fig);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { pinKey = ''; pinNow(); });
+  const tick = () => { if (pin.on) return; if (performance.now() - hold > 5000) set((cur + 1) % n); };     /* turns on its own only where it cannot hold */
   if ('IntersectionObserver' in window) new IntersectionObserver(es => es.forEach(e => { clearInterval(timer); if (e.isIntersecting) timer = setInterval(tick, 2600); }), { threshold: 0.3 }).observe(fig); else timer = setInterval(tick, 2600);
 }
 

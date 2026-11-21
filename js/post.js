@@ -66,14 +66,18 @@ void main(){
 
 /* the final grade, straight to the screen */
 const FINAL_FS = `varying vec2 vUv; uniform sampler2D src; uniform sampler2D bloom; uniform sampler2D dof; uniform float useDof; uniform float useBloom;
-uniform float bloomK; uniform float exposure; uniform float time; uniform float grain; uniform float vignette; uniform float fringe; uniform float aspect; uniform float lift; uniform float warp;
+uniform vec2 textureSize0; uniform float bloomK; uniform float exposure; uniform float time; uniform float grain; uniform float vignette; uniform float fringe; uniform float aspect; uniform float lift; uniform float warp;
 uniform vec2 lensC; uniform float lensR; uniform float lensK; uniform float lensE; uniform float lensA;
+uniform sampler2D depthT; uniform float zNear; uniform float zFar; uniform float solidZ;
 // the same filmic curve three.js uses (ACES fitted, with its input and output matrices), so the calibration matches
 vec3 rrt(vec3 v){ vec3 a = v * (v + 0.0245786) - 0.000090537; vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081; return a / b; }
 vec3 aces(vec3 c){
   const mat3 IN = mat3(vec3(0.59719, 0.07600, 0.02840), vec3(0.35458, 0.90834, 0.13383), vec3(0.04823, 0.01566, 0.83777));
   const mat3 OUTM = mat3(vec3(1.60475, -0.10208, -0.00327), vec3(-0.53108, 1.10813, -0.07276), vec3(-0.07367, -0.00605, 1.07602));
   c /= 0.6; c = IN * c; c = rrt(c); c = OUTM * c; return clamp(c, 0.0, 1.0); }
+float linZ(vec2 p){ float d = texture2D(depthT, p).x; return zNear * zFar / (zFar - d * (zFar - zNear)); }
+/* how much of a solid thing (a world, the ring) is drawn at p: nearer than solidZ, with a few pixels' margin so its air comes too */
+float solidAt(vec2 p, vec2 px){ float z = min(min(linZ(p), linZ(p + vec2(px.x, 0.0))), min(min(linZ(p - vec2(px.x, 0.0)), linZ(p + vec2(0.0, px.y))), linZ(p - vec2(0.0, px.y)))); return 1.0 - smoothstep(solidZ * 0.97, solidZ, z); }
 float hash(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 void main(){
   vec2 c = vUv - 0.5; vec2 cq = c * vec2(aspect, 1.0); float r2 = dot(cq, cq);
@@ -83,15 +87,26 @@ void main(){
      dark mouth, most at the middle; the ring itself and the sky outside it are not bent, only dimmed */
   float hole = 1.0;
   if (lensK > 0.001) {
+    vec2 uv0 = uv;
     vec2 d = (uv - lensC) * vec2(aspect, 1.0), ax = vec2(cos(lensA), sin(lensA)), ay = vec2(-ax.y, ax.x);
     float E = max(lensE, 0.05), Rr = max(lensR, 1e-4);
     vec2 q = vec2(dot(d, ax), dot(d, ay) / E) / Rr; float f = length(q) + 1e-5;
     float inside = 1.0 - smoothstep(0.7, 0.92, f), deep = clamp(1.0 - f, 0.0, 1.0);
     float sw = -lensK * inside * (1.1 + 3.6 * deep * deep); float cs = cos(sw), sn = sin(sw); q = vec2(q.x * cs - q.y * sn, q.x * sn + q.y * cs);
     q *= 1.0 + lensK * inside * 0.6 * deep;
-    hole = 1.0 - lensK * 0.94 * (1.0 - smoothstep(0.05, 0.16 + 0.5 * lensK, f));            /* its mouth: no light comes back out of the middle */
-    hole *= 1.0 - lensK * 0.42 * smoothstep(1.15, 2.8, f);                                       /* the sky round it dims as it feeds */
+    float mouth = 1.0 - smoothstep(0.05, 0.16 + 0.5 * lensK, f), dimOut = 1.0 - lensK * 0.42 * smoothstep(1.15, 2.8, f);
+    hole = (1.0 - lensK * 0.94 * mouth) * dimOut;                                                   /* its mouth: no light comes back out of the middle; the sky round it dims as it feeds */
     uv = lensC + (ax * q.x + ay * q.y * E) * Rr / vec2(aspect, 1.0);
+    /* the light is bent, the things are not: a world (or the ring) drawn here is shown whole where it is, and only goes dark
+       right at the mouth, so the globe and the three bodies are seen falling in complete and being swallowed. Where the bent
+       light would have come from a world, the light there is left unbent (so no smeared copy of it trails round) */
+    if (solidZ > 0.0) {
+      vec2 px = 3.0 / vec2(textureSize0.x, textureSize0.y);
+      float keep = solidAt(uv0, px);
+      float ghost = (1.0 - keep) * max(solidAt(uv, px * 0.7), solidAt(uv, px * 2.4));
+      uv = mix(uv, uv0, max(keep, ghost));
+      hole = mix(hole, (1.0 - lensK * 0.97 * (1.0 - smoothstep(0.02, 0.09, f))) * dimOut, keep);
+    }
   }
   vec2 fo = c * (fringe * (0.25 + r2 * 1.6));                          // lens fringing, stronger at the edges
   vec3 col = vec3(texture2D(src, uv - fo).r, texture2D(src, uv).g, texture2D(src, uv + fo).b);
@@ -130,9 +145,10 @@ export function createPost(renderer, { phone, bloom = true, dof = true, samples 
   const blurP = quadPass(BLUR_FS, { src: { value: null }, texel: { value: new THREE.Vector2() }, radius: { value: 9 } }, { TAPS: phone ? 18 : 34 });
   const fin = quadPass(FINAL_FS, { src: { value: scene.texture }, bloom: { value: null }, dof: { value: null }, useDof: { value: 0 }, useBloom: { value: bloom ? 1 : 0 }, bloomK: { value: 0.2 },
     exposure: { value: 1.0 }, time: { value: 0 }, grain: { value: 0.018 }, vignette: { value: 0.55 }, fringe: { value: 0.0016 }, aspect: { value: 1 }, lift: { value: 0.006 }, warp: { value: 0 },
-    lensC: { value: new THREE.Vector2(0.5, 0.5) }, lensR: { value: 0.1 }, lensK: { value: 0 }, lensE: { value: 1 }, lensA: { value: 0 } });
+    lensC: { value: new THREE.Vector2(0.5, 0.5) }, lensR: { value: 0.1 }, lensK: { value: 0 }, lensE: { value: 1 }, lensA: { value: 0 },
+    depthT: { value: depthTex }, zNear: { value: 0.5 }, zFar: { value: 22000 }, solidZ: { value: 0 }, textureSize0: { value: new THREE.Vector2(1, 1) } });
   let cocRT = null, blurRT = null; let dofOn = !!dof, stale = false;
-  const st = { focus: 100, aperture: 0, warp: 0, fringeBoost: 0, lens: { u: 0.5, v: 0.5, r: 0.1, k: 0, e: 1, a: 0 } };   // lens: the ring's middle (0-1 across, 0-1 up), its long half axis (in screen heights), strength, short/long, lean; for one frame
+  const st = { focus: 100, aperture: 0, warp: 0, fringeBoost: 0, lens: { u: 0.5, v: 0.5, r: 0.1, k: 0, e: 1, a: 0, z: 0 } };   // lens: the ring's middle (0-1 across, 0-1 up), its long half axis (in screen heights), strength, short/long, lean, and how far off the solid things end (nearer is a world, not sky); for one frame
 
   function setSize(w, h) { // w, h: the drawing buffer in pixels
     scene.setSize(w, h);
@@ -162,7 +178,7 @@ export function createPost(renderer, { phone, bloom = true, dof = true, samples 
       fin.u.dof.value = blurRT.texture;
     }
     fin.u.useDof.value = useDof ? 1 : 0; fin.u.useBloom.value = bloom ? 1 : 0; fin.u.time.value = time; fin.u.warp.value = st.warp; fin.u.fringe.value = 0.0016 + st.fringeBoost;
-    fin.u.lensC.value.set(st.lens.u, st.lens.v); fin.u.lensR.value = st.lens.r; fin.u.lensK.value = st.lens.k; fin.u.lensE.value = st.lens.e === undefined ? 1 : st.lens.e; fin.u.lensA.value = st.lens.a || 0; st.lens.k = 0;
+    fin.u.lensC.value.set(st.lens.u, st.lens.v); fin.u.lensR.value = st.lens.r; fin.u.lensK.value = st.lens.k; fin.u.lensE.value = st.lens.e === undefined ? 1 : st.lens.e; fin.u.lensA.value = st.lens.a || 0; fin.u.solidZ.value = st.lens.z || 0; fin.u.zNear.value = camera.near; fin.u.zFar.value = camera.far; fin.u.textureSize0.value.set(size.x, size.y); st.lens.k = 0;
     draw(fin, null);
   }
   /* switch the glow or the focus blur on or off; the targets are remade on the next frame */
