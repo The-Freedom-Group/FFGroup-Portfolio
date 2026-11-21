@@ -44,37 +44,38 @@ void main(){
 
 /* the sky of the way down. Colours are scene-linear and go through the same finish as everything else. */
 
-/* The climb (the raise) has its own, quieter cloud, drawn over the evening sky of the launch pad's world, so the moon and
-   the dusk behind it are the real ones. It starts under a deck of cloud, rises into it (the frame fills with mist) and
+/* The climb (the raise) has its own, quieter cloud, drawn over the evening sky of the launch pad's world, so the planet
+   and the dusk behind it are the real ones. It starts under a deck of cloud, rises into it (the frame fills with mist) and
    comes out above: from there the cloud is dark and sparse and keeps to the edges of the frame, lit along its rims from
-   where the moon is, the last pink of the dusk on its undersides, and the deck that was climbed through lies along the
-   bottom as a soft bank. As night settles it all thins away. Colour comes out already multiplied by its cover. */
+   where the planet is (its light faintly pink), the last pink of the dusk on its undersides, and the deck that was
+   climbed through lies along the bottom as a soft bank. As night settles it all thins away. Colour comes out already
+   multiplied by its cover. */
 const FS_UP = `precision highp float; varying vec2 vUv;
-uniform float time, aspect, ride, cover, room, veil, bank, thin, dusk; uniform vec2 moon;
+uniform float time, aspect, ride, cover, room, veil, bank, thin, dusk; uniform vec2 planet;
 float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
 float fbm(vec2 p){ float a = 0.0, w = 0.5; for (int i = 0; i < OCT; i++) { a += w * noise(p); p = p * 2.07 + vec2(13.7, 7.1); w *= 0.5; } return a; }
 void main(){
   vec2 p = vec2((vUv.x - 0.5) * aspect, vUv.y - 0.5);
-  vec2 toMoon = normalize(moon - p + vec2(1e-4)); float nearMoon = exp(-length(moon - p) * 2.4);
+  vec2 toPlanet = normalize(planet - p + vec2(1e-4)); float nearPlanet = exp(-length(planet - p) * 2.4);
   vec3 cShade = mix(vec3(0.011, 0.011, 0.02), vec3(0.03, 0.025, 0.05), dusk);         // the body of the cloud: dark, purple while there is dusk
-  vec3 cLit = mix(vec3(0.085, 0.09, 0.125), vec3(0.17, 0.15, 0.225), dusk);           // where the moon catches it
+  vec3 cLit = mix(vec3(0.098, 0.08, 0.118), vec3(0.19, 0.14, 0.215), dusk);           // where the planet's light catches it: faintly pink
   vec3 cGlow = vec3(0.15, 0.048, 0.092) * dusk;                                       // the last of the dusk, from below
   vec3 pm = vec3(0.0); float a = 0.0;
   float edge = length(vec2(p.x / (aspect * 0.5), p.y / 0.5));                         // 0 in the middle of the frame, 1 at its sides
-  float keep = mix(1.0, mix(0.06, 1.0, smoothstep(0.55, 1.22, edge)), room) * (1.0 - nearMoon * 0.8 * room) * (1.0 - thin);
+  float keep = mix(1.0, mix(0.06, 1.0, smoothstep(0.55, 1.22, edge)), room) * (1.0 - nearPlanet * 0.8 * room) * (1.0 - thin);
   float th = mix(0.575, 0.47, cover), f = fract(ride), base = floor(ride);
   for (int j = LAYERS - 1; j >= 0; j--) {
     float z = (float(j) + 1.0 - f) / float(LAYERS);                                   // 1: a deck far ahead; 0: going past
     float id = base + float(j);
     vec2 q = p * mix(0.5, 2.5, z) + vec2(hash(vec2(id, 1.7)), hash(vec2(id, 9.2))) * 40.0 + vec2(time * 0.004, 0.0);
     vec2 w = (vec2(noise(q * 1.4 + 2.0), noise(q * 1.4 + 7.3)) - 0.5) * WARP;
-    float d = fbm(q + w), l = fbm(q + w + toMoon * 0.07);
+    float d = fbm(q + w), l = fbm(q + w + toPlanet * 0.07);
     float dens = smoothstep(th, th + mix(0.3, 0.13, z), d) * smoothstep(1.0, 0.7, z) * smoothstep(0.0, 0.22, z) * keep;
     float lit = clamp(0.5 + (d - l) * 6.5, 0.0, 1.0); lit = lit * lit * (3.0 - 2.0 * lit);
     lit *= 1.0 - smoothstep(th + 0.03, th + 0.2, d) * 0.85;                           // only the rims catch it
-    vec3 c = mix(cShade, cLit, lit * (0.55 + 0.9 * nearMoon)) + cGlow * (0.1 + 0.9 * smoothstep(0.15, -0.5, p.y)) * (1.0 - lit);
+    vec3 c = mix(cShade, cLit, lit * (0.55 + 0.9 * nearPlanet)) + cGlow * (0.1 + 0.9 * smoothstep(0.15, -0.5, p.y)) * (1.0 - lit);
     pm = c * dens + pm * (1.0 - dens); a = dens + a * (1.0 - dens);
   }
   if (bank > 0.002) {                                                                 // the deck below: two soft ridges, the nearer one darker
@@ -92,7 +93,7 @@ void main(){
   if (veil > 0.002) {                                                                 // inside the deck
     float t = fbm(p * 1.3 + vec2(0.0, ride * 0.8) + 20.0);
     vec3 c = mix(cShade * 1.5, cLit * 0.6, 0.25 + 0.6 * t) + cGlow * 0.2 * smoothstep(0.2, -0.5, p.y);
-    float al = veil * (0.62 + 0.38 * t) * (1.0 - nearMoon * 0.35);
+    float al = veil * (0.62 + 0.38 * t) * (1.0 - nearPlanet * 0.35);
     pm = c * al + pm * (1.0 - al); a = al + a * (1.0 - al);
   }
   pm += (hash(gl_FragCoord.xy + fract(time) * 91.7) - 0.5) * 0.008 * a;
@@ -111,12 +112,12 @@ export function createClouds({ small, lite }) {
   const sp = (v, a, b) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
   const st = { on: false, veil: 0 };
   /* the climb's own cloud: fewer decks, fewer octaves, and it is laid over the sky rather than replacing it */
-  const uu = { time: { value: 0 }, aspect: { value: 1 }, ride: { value: 0 }, cover: { value: 0 }, room: { value: 1 }, veil: { value: 0 }, bank: { value: 0 }, thin: { value: 0 }, dusk: { value: 1 }, moon: { value: new THREE.Vector2(-0.4, 0.3) } };
+  const uu = { time: { value: 0 }, aspect: { value: 1 }, ride: { value: 0 }, cover: { value: 0 }, room: { value: 1 }, veil: { value: 0 }, bank: { value: 0 }, thin: { value: 0 }, dusk: { value: 1 }, planet: { value: new THREE.Vector2(-0.4, 0.3) } };
   const matUp = new THREE.ShaderMaterial({ uniforms: uu, vertexShader: VS, fragmentShader: FS_UP, defines: { LAYERS: small ? 2 : 3, OCT: small ? 3 : 4, WARP: small && lite ? '0.0' : '0.7' }, transparent: true, premultipliedAlpha: true, depthTest: false, depthWrite: false });
   const meshUp = new THREE.Mesh(geo, matUp); meshUp.frustumCulled = false; const sceneUp = new THREE.Scene(); sceneUp.add(meshUp); let cur = null;
   return { st, scene, mat, matUp,
     /* which: 'down' with e = progress through the descent (negative while the dive is still arriving), 'up' through the raise
-       (sky: where the moon is on the screen as fractions of its width and height, and how much dusk is left), or null */
+       (sky: where the planet is on the screen as fractions of its width and height, and how much dusk is left), or null */
     update(which, e, time, aspect, sky) {
       cur = which;
       u.time.value = time; u.aspect.value = aspect; st.veil = 0;
@@ -128,7 +129,7 @@ export function createClouds({ small, lite }) {
         uu.time.value = time; uu.aspect.value = aspect; uu.ride.value = 1.9 + Math.max(-0.4, e) * 5.2;
         uu.cover.value = 0.8 * (1 - sp(e, -0.05, 0.11)); uu.room.value = sp(e, -0.02, 0.12); uu.veil.value = sp(e, -0.13, 0.0) * (1 - sp(e, 0.015, 0.105)) * 0.86;
         uu.bank.value = sp(e, 0.05, 0.2) * (1 - sp(e, 0.81, 0.94)); uu.thin.value = sp(e, 0.82, 0.955); uu.dusk.value = sky ? sky.dusk : 1;
-        if (sky) uu.moon.value.set((sky.x - 0.5) * aspect, 0.5 - sky.y);
+        if (sky) uu.planet.value.set((sky.x - 0.5) * aspect, 0.5 - sky.y);
         st.on = e < 0.96;
       } else st.on = false;
     },

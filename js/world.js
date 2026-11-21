@@ -65,7 +65,7 @@ export function createWorld({ canvas, onProgress }) {
     if (!shown) return;
     setFinish(null);
     if (pad.out.on) {   /* the evening: the pad's own sky and ground, with the cloud of the climb over it while the raise is on screen */
-      pad.update(s, dt, time); sky.x = pad.out.moonX / W; sky.y = pad.out.moonY / H; sky.dusk = pad.out.dusk;
+      pad.update(s, dt, time); sky.x = pad.out.planetX / W; sky.y = pad.out.planetY / H; sky.dusk = pad.out.dusk;
       clouds.update(s.raise.on ? 'up' : null, s.raise.pe, time, W / H, sky);
       post.st.aperture = 0; post.render(pad.scene, pad.camera, time, clouds.st.on ? r => clouds.draw(r) : null);
     } else if (shown === 'globe') drawMap(s, dt, time);                // the expansion map draws itself

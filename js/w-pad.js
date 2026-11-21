@@ -1,19 +1,20 @@
 /* The launch pad at night: the rocket on its mount beside the service tower, flood-lit, mist lying on the ground and in
-   the valleys, the moon up, and low over the hills on the far side the group's own world, the pink planet the story's
-   rocket set out from. Units are metres.
+   the valleys, and high over the hills on the far side the group's own world, the pink planet the story's rocket set out
+   from, turning slowly. Units are metres.
    The night is built as a photograph of it would show it: a sky graded from a deep zenith down to a faint warm glow on the
    horizon, the Milky Way across it (the real one, from the star map the opening uses) and stars of every size and colour,
-   thin high cloud catching the moon; three ranges of hills, each further off and further lost in the haze, with a few
-   lights of the towns along them and a red beacon on a mast; the tree line in front; searchlights sweeping slowly up
+   thin high cloud catching the planet's light; three ranges of hills, each further off and further lost in the haze, with
+   a few lights of the towns along them and a red beacon on a mast; the tree line in front; searchlights sweeping slowly up
    from beyond the pad; the floodlights pooling on the ground, which is damp enough to shine; a few birds going over.
    The same evening stands behind the two parts before it. Through the raise the camera looks up into a dusk sky (the
-   cloud of the climb is drawn over it); as the raise ends the dusk goes out of it and the moon crosses to its night
-   place, and that sky is what Beyond sits under. As Beyond ends the camera comes down out of the sky to the complex
-   (the planet, the searchlights and the hills come up into the frame as it does), and as the page scrolls on the rocket
-   comes down too, under its own burn, and settles on the pad. On "Press for liftoff" the engines light, the pad fills
-   with smoke and the rocket climbs out of the top of the frame. */
+   cloud of the climb is drawn over it, lit from the planet); as the raise ends the dusk goes out of it and the planet
+   crosses to its night place, and that sky is what Beyond sits under. As Beyond ends the camera comes down out of the sky
+   to the complex (the planet sinks to its place over the pad, and the searchlights and the hills come up into the frame
+   as it does), and as the page scrolls on the rocket comes down too, under its own burn, and settles on the pad. On
+   "Press for liftoff" the engines light, the pad fills with smoke and the rocket climbs out of the top of the frame. */
 import * as THREE from 'three';
-import { mapTex, softDisc } from './planets.js';
+import { mapTex, softDisc, makeWorld } from './planets.js';
+import { WORLDS } from './worlds.js';
 import { GLSL_NOISE } from './util.js';
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -28,16 +29,20 @@ const dirDeg = (az, el) => V(Math.sin(az * DEG) * Math.cos(el * DEG), Math.sin(e
 /* the stretch of the liftoff scene (0 at its start, 1 at its end) over which the rocket comes down and settles */
 export const ARRIVE = [0.12, 0.6];
 const DOWN = 0.86;                                               // how far through that stretch it touches the pad; the rest is the settle
-/* the moon: where it stands over the pad, and how high it rides earlier in the evening, while the camera is looking up */
-const MOON = V(1500, 1380, -3400), MOON_R = MOON.length(), MOON_AZ = Math.atan2(MOON.x, -MOON.z), MOON_EL = Math.asin(MOON.y / MOON_R), MOON_UP = 42 * DEG, MOON_SIZE = 150;
-/* the planet: once the view has closed on the rocket it stands at this place on the screen (fractions of its width and
-   height: low on the far side of the rocket from the words, its foot behind the far hills), this large across; on a
-   phone, in the narrow frame beside the rocket, smaller: there it is held this far round from the way the camera faces
-   the pad (degrees right, and up), as the camera turns a little while it closes in and would otherwise bring the rocket
-   down over it. Where the camera stands when it is placed so, on each. */
-const PLANET_AT = [0.872, 0.655], PLANET_ANG = 4.3 * DEG, PLANET_PHONE = [5.7, 5.7], PLANET_ANG_PHONE = 2.1 * DEG, PLANET_D = 4700;
-const CAM_DESK = [V(-22, 4.2, 82), V(3, 26.5, 0)], CAM_PHONE = V(-10, 6, 150);
-const PLANET_LON = 8;                                            // the longitude it turns to the viewer: Europe and Africa, home at the top
+/* the planet: the group's own world (made as the system makes Enterprise), high in the sky on the far side of the rocket
+   from the words. Down at the pad it stands at these places on the screen (fractions of its width and height): the first
+   as the view has just come down, the second once it has closed in on the rocket. On a phone, where the pad is seen
+   through a narrow frame, it is held this far round from straight ahead and this high (degrees), just under the heading.
+   While the camera is still looking up, earlier in the evening, it rides this high. Its radius as an angle, how far off it
+   is drawn (it keeps that distance from the camera, as anything so far off does), and the seconds it takes to turn once. */
+const PLANET_FAR = [0.725, 0.15], PLANET_AT = [0.734, 0.31], PLANET_PHONE = [9.3, 18.0], PLANET_UP = 42 * DEG;
+const PLANET_ANG = 1.93 * DEG, PLANET_D = 3200, PLANET_R = PLANET_D * Math.tan(PLANET_ANG), PLANET_TURN = 80;
+const PLANET_LON = 8;                                            // the longitude it shows the viewer at first: Europe and Africa, home at the top
+/* where its light comes from, seen from the viewer: from the left, a little above and in front, so the day side fills most
+   of the disc and the terminator runs down its far side (right, up, toward the viewer) */
+const PLANET_SUN = [-0.62, 0.42, 0.55];
+/* where the camera stands, and what it looks at, at the pad: as the view comes down, and once it has closed in */
+const CAM_FAR = [V(-70, 13, 236), V(6, 31, 0)], CAM_NEAR = [V(-22, 4.2, 82), V(3, 26.5, 0)];
 /* the Milky Way runs along the great circle through these two points (low beside the tower, high over the rocket), its
    bright core rising here */
 const MW_A = [2, 0], MW_B = [27, 42], MW_CORE = [7, 9];
@@ -52,10 +57,10 @@ vec3 skyCol(vec3 d){ float y = d.y;
   vec3 c = mix(hor + vec3(0.085, 0.02, 0.045) * glow, mid, smoothstep(-0.02, 0.17, y)); c = mix(c, top, smoothstep(0.11, 0.66, y));
   c += vec3(0.042, 0.014, 0.028) * (1.0 - dusk) * exp(-max(y, 0.0) * 26.0) * (0.6 + 0.4 * glow);         // and the dome of light the towns put on the haze
   return c; }`;
-const SKY_FS = GLSL_NOISE + SKY_COL + `uniform float time, cloudK; uniform vec3 moonDir; varying vec3 vDir;
-void main(){ vec3 d = normalize(vDir); vec3 c = skyCol(d); float mu = max(dot(d, moonDir), 0.0);
-  c += vec3(0.014, 0.016, 0.024) * pow(mu, 14.0) * (1.0 - 0.6 * dusk);                          // the air round the moon, lit by it
-  if (d.y > 0.03 && cloudK > 0.002) {   /* thin high cloud on a sheet overhead, drawn out in streaks, catching the moon (never in front of it) */
+const SKY_FS = GLSL_NOISE + SKY_COL + `uniform float time, cloudK; uniform vec3 planetDir; varying vec3 vDir;
+void main(){ vec3 d = normalize(vDir); vec3 c = skyCol(d); float mu = max(dot(d, planetDir), 0.0);
+  c += vec3(0.015, 0.006, 0.011) * pow(mu, 14.0) * (1.0 - 0.6 * dusk);                         /* the air round the planet, faintly pink with its light */
+  if (d.y > 0.03 && cloudK > 0.002) {   /* thin high cloud on a sheet overhead, drawn out in streaks, catching the planet's light (never in front of it) */
     vec2 q = d.xz / (d.y + 0.12); q = vec2(q.x * 0.82 + q.y * 0.57, -q.x * 0.57 + q.y * 0.82);
     vec3 p = vec3(q.x * 0.55 + time * 0.004, q.y * 2.6, 0.5);
     #ifdef LOW
@@ -63,8 +68,8 @@ void main(){ vec3 d = normalize(vDir); vec3 c = skyCol(d); float mu = max(dot(d,
     #else
     float n = fbm(p);
     #endif
-    float cl = smoothstep(0.53, 0.8, n) * smoothstep(0.03, 0.22, d.y) * (1.0 - smoothstep(0.9975, 0.9995, mu)) * cloudK;
-    vec3 lit = mix(vec3(0.026, 0.029, 0.04), vec3(0.16, 0.08, 0.12), dusk) * (0.5 + 2.6 * pow(mu, 8.0));
+    float cl = smoothstep(0.53, 0.8, n) * smoothstep(0.03, 0.22, d.y) * (1.0 - smoothstep(0.9969, 0.9989, mu)) * cloudK;
+    vec3 lit = mix(vec3(0.026, 0.029, 0.04), vec3(0.16, 0.08, 0.12), dusk) * (vec3(0.5) + vec3(2.9, 2.0, 2.5) * pow(mu, 8.0));
     c = mix(c, lit, cl * 0.6);
   }
   gl_FragColor = vec4(c, 1.0); }`;
@@ -97,37 +102,6 @@ void main(){ float on = kind > 0.5 ? smoothstep(0.0, 0.08, fract(time * 0.42 + p
   vC = tint * on * k; gl_PointSize = (kind > 0.5 ? 3.4 : 1.6 + phase * 1.1) * pr; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const FAR_FS = `varying vec3 vC; void main(){ float r = length(gl_PointCoord - 0.5) * 2.0; gl_FragColor = vec4(vC * exp(-r * r * 4.5) * (1.0 - smoothstep(0.8, 1.0, r)), 1.0); }`;
 
-/* the planet is drawn as the logo draws the globe (w-globe.js): a hot pink sea under white land, cut from the water map.
-   It is designed in the colours the screen should show and worked back through the film finish (post.js), so that the
-   pink lands as the brand's pink; the inverse of the finish's curve and matrices, as there */
-const M_IN = new THREE.Matrix3().set(0.59719, 0.35458, 0.04823, 0.07600, 0.90834, 0.01566, 0.02840, 0.13383, 0.83777);
-const M_OUT = new THREE.Matrix3().set(1.60475, -0.53108, -0.07367, -0.10208, 1.10813, -0.00605, -0.00327, -0.07276, 1.07602);
-const glInv = m => 'mat3(' + m.clone().invert().elements.map(v => v.toFixed(7)).join(', ') + ')';
-const UNGRADE = `
-const mat3 IN_INV = ${glInv(M_IN)}; const mat3 OUT_INV = ${glInv(M_OUT)};
-vec3 toLin(vec3 c){ return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
-vec3 curveInv(vec3 y){ y = clamp(y, 0.0, 0.985); vec3 A = 1.0 - y * 0.983729; vec3 B = 0.0245786 - y * 0.4329510; vec3 C = -(0.000090537 + y * 0.238081); return (-B + sqrt(B * B - 4.0 * A * C)) / (2.0 * A); }
-vec3 ungrade(vec3 c){ return max(IN_INV * curveInv(OUT_INV * toLin(clamp(c, 0.0, 1.0))), 0.0) * 0.6; }`;
-const PLANET_VS = `varying vec2 vUv; varying vec3 vN; varying vec3 vW; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`;
-const PLANET_FS = `varying vec2 vUv; varying vec3 vN; varying vec3 vW; uniform sampler2D water; uniform vec3 sun; uniform float k; uniform vec3 haze;` + UNGRADE + `
-void main(){
-  vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float edge = 1.0 - clamp(dot(N, V), 0.0, 1.0);
-  float wv = texture2D(water, vUv).r, aa = clamp(fwidth(wv) * 0.8, 0.02, 0.5), land = 1.0 - smoothstep(0.5 - aa, 0.5 + aa, wv);
-  float nl = dot(N, sun), day = smoothstep(-0.1, 0.3, nl), lit = clamp(nl, 0.0, 1.0);
-  /* by day: the sea from a deep shade to the brand's pink where the light is full on it, the land white; deeper toward the
-     limb. A night photograph's exposure: bright, but nothing burnt out */
-  vec3 sea = mix(vec3(0.34, 0.015, 0.17), vec3(0.9, 0.12, 0.47), smoothstep(0.0, 0.75, lit));
-  vec3 ground = mix(vec3(0.5, 0.4, 0.46), vec3(0.88, 0.83, 0.86), smoothstep(0.0, 0.8, lit));
-  vec3 col = mix(sea, ground, land) * (1.0 - 0.3 * pow(edge, 1.8));
-  col += vec3(1.0, 0.8, 0.9) * pow(max(dot(reflect(-sun, N), V), 0.0), 40.0) * (1.0 - land) * 0.1;    // the sun on its sea
-  col = mix(mix(vec3(0.022, 0.003, 0.013), vec3(0.035, 0.022, 0.032), land), col, day);               // the night side
-  col += vec3(1.0, 0.36, 0.66) * pow(edge, 3.0) * smoothstep(-0.25, 0.35, nl) * 0.26;                  // its air, lit on the day side,
-  col += vec3(1.0, 0.62, 0.84) * pow(edge, 9.0) * smoothstep(-0.1, 0.45, nl) * 0.55;                   // and the thin bright line of it on the limb
-  /* low in our own sky it is seen through more air: dimmer, warmer, a little lost in the haze toward its foot */
-  float ext = 1.0 - smoothstep(0.02, 0.2, normalize(vW - cameraPosition).y);
-  col = mix(col, col * vec3(0.92, 0.7, 0.8) * 0.72 + haze, ext * 0.6);
-  gl_FragColor = vec4(ungrade(col), k);
-}`;
 const SMOKE_VS = `attribute float aSize; attribute float aAlpha; attribute float aHeat; uniform float px; varying float vA; varying float vH;
 void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = min(900.0, aSize * px / max(1.0, -mv.z)); vA = aAlpha; vH = aHeat; gl_Position = projectionMatrix * mv; }`;
 const SMOKE_FS = `uniform sampler2D map; varying float vA; varying float vH;
@@ -148,9 +122,9 @@ export function createPad({ renderer, small, dpr, spec }) {
   const glowAt = (parent, x, y, z, size, colour) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: colour, depthWrite: false, fog: false, blending: THREE.AdditiveBlending })); s.position.set(x, y, z); s.scale.setScalar(size); parent.add(s); return s; };
 
   /* ───────── the sky ───────── */
-  const skyU = { dusk: { value: 0 }, time: { value: 0 }, cloudK: { value: 0.8 }, moonDir: { value: V(0, 0.3, -1).normalize() } };
+  const skyU = { dusk: { value: 0 }, time: { value: 0 }, cloudK: { value: 0.8 }, planetDir: { value: V(0, 0.3, -1).normalize() } };
   const sky = add(new THREE.SphereGeometry(6000, 48, 24), new THREE.ShaderMaterial({ uniforms: skyU, vertexShader: SKY_VS, fragmentShader: SKY_FS, defines: small ? { LOW: 1 } : {}, side: THREE.BackSide, depthWrite: false, fog: false })); sky.renderOrder = -5;
-  /* the Milky Way, and the stars, which turn with the moon as it crosses the sky through the evening (see update) */
+  /* the Milky Way, and the stars, which turn with the planet as it crosses the sky through the evening (see update) */
   const mwN = V().crossVectors(dirDeg(...MW_A), dirDeg(...MW_B)).normalize(), mwC = dirDeg(...MW_CORE); mwC.addScaledVector(mwN, -mwC.dot(mwN)).normalize();
   const mwS = V().crossVectors(mwC, mwN), mwBase = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(mwC, mwN, mwS));   // the map's band runs round its equator, its core at +x
   const mwU = { map: { value: mapTex('milkyway') }, k: { value: 0 } };
@@ -168,21 +142,24 @@ export function createPad({ renderer, small, dpr, spec }) {
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('size', new THREE.BufferAttribute(size, 1)); geo.setAttribute('phase', new THREE.BufferAttribute(ph, 1)); geo.setAttribute('tint', new THREE.BufferAttribute(tint, 3));
     const pts = new THREE.Points(geo, new THREE.ShaderMaterial({ uniforms: { time: { value: 0 }, pr: { value: dpr }, k: { value: 1 }, low: { value: 0.1 } }, vertexShader: STAR_VS, fragmentShader: STAR_FS, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
     pts.frustumCulled = false; pts.renderOrder = -4; scene.add(pts); return pts; })();
-  const moon = add(new THREE.SphereGeometry(MOON_SIZE, 48, 24), new THREE.MeshBasicMaterial({ map: mapTex('moon'), color: 0xcfcac2, fog: false }), 1500, 1380, -3400); moon.rotation.y = 4.4;
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: softDisc(256, [[0, 'rgba(255,240,230,.28)'], [0.16, 'rgba(255,225,228,.07)'], [0.5, 'rgba(255,220,225,.02)'], [1, 'rgba(255,220,225,0)']]), depthWrite: false, fog: false, blending: THREE.AdditiveBlending })); halo.position.copy(moon.position); halo.scale.setScalar(1300); scene.add(halo);
-
-  /* the planet: the group's own world, low over the far hills. It stands still in the world (the hills and the tree line
-     go across its foot as the camera moves), turns slowly, and takes its light from the moon's side of the sky */
-  const planet = new THREE.Group(), planetTip = new THREE.Group(), planetSpin = new THREE.Group(); planetTip.rotation.x = 0.32; planet.add(planetTip); planetTip.add(planetSpin); scene.add(planet);
-  const planetU = { water: { value: mapTex('earth-spec', { colour: false }) }, sun: { value: V(0, 0, 1) }, k: { value: 0 }, haze: { value: V(0.07, 0.03, 0.055) } };
-  const planetBall = new THREE.Mesh(new THREE.SphereGeometry(1, small ? 64 : 96, small ? 32 : 48), new THREE.ShaderMaterial({ uniforms: planetU, vertexShader: PLANET_VS, fragmentShader: PLANET_FS, transparent: true }));
-  planetBall.renderOrder = -2; planetSpin.add(planetBall);
-  const planetGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: softDisc(256, [[0, 'rgba(255,80,165,.22)'], [0.24, 'rgba(255,64,155,.16)'], [0.36, 'rgba(255,50,145,.06)'], [0.62, 'rgba(255,45,141,.015)'], [1, 'rgba(255,45,141,0)']]), depthWrite: false, fog: false, transparent: true, blending: THREE.AdditiveBlending }));
-  planetGlow.renderOrder = -2; planet.add(planetGlow);
-  const pdDesk = V(), pdPhone = V(), sunDir = V(), aimCam = new THREE.PerspectiveCamera(FOV, 1, 0.5, 12000);
-  /* where the planet has to be for it to stand at PLANET_AT once the view has closed on the rocket, at this size of screen */
-  function placePlanet(w, h) { aimCam.aspect = w / h; aimCam.position.copy(CAM_DESK[0]); aimCam.lookAt(CAM_DESK[1]); aimCam.setViewOffset(w, h, -w * 0.15, 0, w, h); aimCam.updateProjectionMatrix(); aimCam.updateMatrixWorld();
-    pdDesk.set(PLANET_AT[0] * 2 - 1, 1 - PLANET_AT[1] * 2, 0.5).unproject(aimCam).sub(aimCam.position).normalize(); }
+  /* the planet: the group's own world, as the system draws Enterprise (sea and land, relief from the normal map, a layer of
+     cloud, its air, the lights of its cities on the night side), made in this sky's own size. It turns slowly, shows the
+     viewer the same tilt of its axis (tipped a little toward them) wherever it stands, and takes its light from PLANET_SUN */
+  const planetSun = V(0, 0, 1e6), planetW = makeWorld(Object.assign({}, WORLDS.enterprise, { R: PLANET_R, spin: 0, cloudK: 0.6 }), planetSun, { seg: small ? 64 : 112 });
+  const planet = new THREE.Group(), planetTip = new THREE.Group(); planetTip.rotation.x = 0.32; planet.add(planetTip); planetTip.add(planetW.group); scene.add(planet);
+  planetW.look.gain.value = 0.84; planetW.look.sat.value = 1.08;  // a night photograph's exposure of it: bright, its pink full, but nothing burnt out under the glow
+  /* its cloud lies a few metres over its ground, which this far off is finer than the depth buffer can tell apart, so the
+     cloud is drawn a little forward */
+  planetW.spin.children.forEach(m => { if (m.material.uniforms.cloudTint) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -6 }); });
+  /* and its light in the air round it: soft, and pink */
+  const planetGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: softDisc(256, [[0, 'rgba(255,92,172,.3)'], [0.2, 'rgba(255,72,160,.12)'], [0.42, 'rgba(255,61,154,.035)'], [0.7, 'rgba(255,55,150,.01)'], [1, 'rgba(255,55,150,0)']]), depthWrite: false, fog: false, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending }));
+  planetGlow.scale.setScalar(PLANET_R * 7.5); planetGlow.renderOrder = -3; planet.add(planetGlow);
+  const atFar = { az: 0, el: 0 }, atNear = { az: 0, el: 0 }, aimCam = new THREE.PerspectiveCamera(FOV, 1, 0.5, 12000), pRight = V(), pUp = V();
+  /* which way the planet has to be, from the camera, for it to stand at PLANET_FAR as the view comes down to the pad and at
+     PLANET_AT once it has closed in on the rocket, at this size of screen */
+  function aim([cpos, ctgt], [fx, fy], w, h, o) { aimCam.aspect = w / h; aimCam.position.copy(cpos); aimCam.up.set(0, 1, 0); aimCam.lookAt(ctgt); aimCam.setViewOffset(w, h, -w * 0.15, 0, w, h); aimCam.updateProjectionMatrix(); aimCam.updateMatrixWorld();
+    const d = V(fx * 2 - 1, 1 - fy * 2, 0.5).unproject(aimCam).sub(aimCam.position).normalize(); o.az = Math.atan2(d.x, -d.z); o.el = Math.asin(d.y); }
+  function placePlanet(w, h) { aim(CAM_FAR, PLANET_FAR, w, h, atFar); aim(CAM_NEAR, PLANET_AT, w, h, atNear); }
   placePlanet(innerWidth, innerHeight);
 
   /* ───────── the horizon ───────── */
@@ -272,7 +249,7 @@ export function createPad({ renderer, small, dpr, spec }) {
     return l; });
   /* the pad's own lights, from high on the far mast, down onto the apron round the mount */
   const padLight = new THREE.SpotLight(0xfff0e6, 1.1, 0, 0.55, 0.85, 0); padLight.position.set(30, 70, 46); padLight.target.position.set(0, 0, -6); scene.add(padLight, padLight.target);
-  scene.add(new THREE.HemisphereLight(0x2c3552, 0x060607, 0.42)); const moonLight = new THREE.DirectionalLight(0xbfd0ff, 0.28); moonLight.position.set(1500, 1380, -3400).normalize(); scene.add(moonLight);
+  scene.add(new THREE.HemisphereLight(0x2c3552, 0x060607, 0.42)); const planetLight = new THREE.DirectionalLight(0xe8c6e6, 0.28); planetLight.position.set(0.4, 0.4, -0.8).normalize(); scene.add(planetLight);   // the planet's light, faintly pink
 
   /* the rocket */
   const rocket = new THREE.Group(); rocket.position.y = 2.2; scene.add(rocket);
@@ -317,8 +294,9 @@ export function createPad({ renderer, small, dpr, spec }) {
      the middle of its height y, its height on screen h (top and base are its nose and its engines), whether it is drawn
      (vis) and whether it is standing on the pad, and k, how far its arrival has gone (0: waiting just above the top of the
      screen, on the line it will come down; 1: settled). on: this world is being drawn; down: how far the view has come
-     down from the sky to the pad (x is where the rocket will enter once this is 1). */
-  const out = { x: 0, y: 0, h: 0, top: 0, base: 0, vis: false, onPad: false, k: 0, on: false, down: 0, moonX: 0, moonY: 0, dusk: 0 };
+     down from the sky to the pad (x is where the rocket will enter once this is 1). planetX, planetY: where the planet is
+     (the climb's cloud is lit from there); dusk: how much of the dusk is left. */
+  const out = { x: 0, y: 0, h: 0, top: 0, base: 0, vis: false, onPad: false, k: 0, on: false, down: 0, planetX: 0, planetY: 0, dusk: 0 };
   const dirOf = (az, el, o) => o.set(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
   const toPx = v => { pv.copy(v).project(camera); px.x = (pv.x * 0.5 + 0.5) * W; px.y = (-pv.y * 0.5 + 0.5) * H; return px; };
   function resize(w, h) { W = w; H = h; camera.aspect = w / h; camera.updateProjectionMatrix(); smokeMat.uniforms.px.value = h * (renderer.getPixelRatio ? renderer.getPixelRatio() : 1) / (2 * TANH); placePlanet(w, h); first = true; }
@@ -328,22 +306,22 @@ export function createPad({ renderer, small, dpr, spec }) {
     const g = smooth(clamp((lo.x + 1) / 1.05));                              // how far the view has come down out of the sky to the complex
     const L = smooth(clamp((lo.pe - 0.04) / 0.74));                          // and how far it has closed in on the rocket
     const a = clamp((lo.pe - ARRIVE[0]) / (ARRIVE[1] - ARRIVE[0]));          // the rocket's arrival
-    /* looking up: the camera stands well back from the complex, turned so the moon sits where the page leaves it room
+    /* looking up: the camera stands well back from the complex, turned so the planet sits where the page leaves it room
        (beside the raise's heading; then, as night settles, it crosses to the open side of Beyond's) */
-    const over = span(e, 0.9, 1.06), moonR = MOON_SIZE / MOON_R / TANH * H / 2;                     // moonR: the moon's radius on the screen
-    const mx = phone ? lerp(0.76, 0.95, over) : lerp(0.24, 0.8, over), my = phone ? lerp(clamp(Math.max((s.pad.sky || H * 0.42) - 14 - moonR, (s.pad.skyTop || 0) + 10 + moonR) / H, 0.14, 0.6), 0.115, over) : lerp(0.2, 0.3, over);   // on a phone: just above the raise's cards, and if the words leave no room there, behind the cards rather than behind the words
-    /* on a phone the pad is seen through a narrow frame, so there the moon stands closer in beside the rocket, and lower */
-    const moonAz = phone ? 9.5 * DEG : MOON_AZ, moonEl = phone ? 18.5 * DEG : MOON_EL;
+    const over = span(e, 0.9, 1.06), planetR = Math.tan(PLANET_ANG) * 1.12 / TANH * H / 2;        // planetR: the planet's radius on the screen, with its air
+    const mx = phone ? lerp(0.76, 0.95, over) : lerp(0.24, 0.8, over), my = phone ? lerp(clamp(Math.max((s.pad.sky || H * 0.42) - 14 - planetR, (s.pad.skyTop || 0) + 10 + planetR) / H, 0.14, 0.6), 0.115, over) : lerp(0.2, 0.3, over);   // on a phone: just above the raise's cards, and if the words leave no room there, behind the cards rather than behind the words
+    /* where it stands once the view is down at the pad (see PLANET_AT); on a phone, through the narrow frame, closer in beside the rocket, and lower */
+    const pAz = phone ? PLANET_PHONE[0] * DEG : lerp(atFar.az, atNear.az, L), pEl = phone ? PLANET_PHONE[1] * DEG : lerp(atFar.el, atNear.el, L);
     const ax = (mx * 2 - 1) * camera.aspect * TANH, ay = (1 - my * 2) * TANH;
-    const pitch = Math.asin(clamp(Math.sin(MOON_UP) * Math.sqrt(ax * ax + ay * ay + 1) / Math.sqrt(1 + ay * ay), -1, 1)) - Math.atan(ay), yaw = moonAz - Math.atan2(ax, Math.cos(pitch) - ay * Math.sin(pitch));
+    const pitch = Math.asin(clamp(Math.sin(PLANET_UP) * Math.sqrt(ax * ax + ay * ay + 1) / Math.sqrt(1 + ay * ay), -1, 1)) - Math.atan(ay), yaw = pAz - Math.atan2(ax, Math.cos(pitch) - ay * Math.sin(pitch));
     /* at the pad */
-    let pox = 0, poy = 0;
+    let pox = 0, poy = 0, room = 0;
     if (phone) {   /* the rocket (47 m and its mount) is fitted to the room the page gives it: under the closing words, then above the controls */
       const k = smooth(clamp((lo.pe - 0.62) / 0.14)), r0 = lerp(s.pad.a0, s.pad.b0, k), r1 = lerp(s.pad.a1, s.pad.b1, k), rh = Math.max(120, r1 - r0), d = Math.max(150, 58 * H / (2 * TANH * rh));
-      cp.set(lerp(-22, -10, L), 6, d); ct.set(0, 24, 0); poy = (r0 + r1) / 2 - H / 2; }
-    else { cp.set(lerp(-70, -22, L), lerp(13, 4.2, L), lerp(236, 82, L)); ct.set(lerp(6, 3, L), lerp(31, 26.5, L), 0); pox = W * 0.15; }
+      cp.set(lerp(-22, -10, L), 6, d); ct.set(0, 24, 0); poy = (r0 + r1) / 2 - H / 2; room = r0; }
+    else { cp.lerpVectors(CAM_FAR[0], CAM_NEAR[0], L); ct.lerpVectors(CAM_FAR[1], CAM_NEAR[1], L); pox = W * 0.15; }
     /* coming down: where the camera stands and which way it faces are eased separately, so the turn down to the complex is even
-       and the moon, sinking at the same rate, keeps its place in the frame */
+       and the planet, sinking at the same rate, keeps its place in the frame */
     tv.subVectors(ct, cp); const far = tv.length(), padPitch = Math.asin(tv.y / far), padYaw = Math.atan2(tv.x, -tv.z);
     cp.lerpVectors(skyAt, cp, g); dirOf(lerp(yaw, padYaw, g), lerp(pitch, padPitch, g), ct).multiplyScalar(lerp(600, far, g)).add(cp); pox *= g; poy *= g;
     /* the burn */
@@ -360,23 +338,22 @@ export function createPad({ renderer, small, dpr, spec }) {
     const k = first ? 1 : 1 - Math.exp(-dt * (T >= 0 ? 3.2 : 5)); pos.lerp(cp, k); tgt.lerp(ct, k);
     camera.position.copy(pos); if (shake > 0) camera.position.add(tv.set((rnd() - 0.5) * shake, (rnd() - 0.5) * shake, 0)); camera.up.set(0, 1, 0); camera.lookAt(tgt);
     if (pox || poy) camera.setViewOffset(W, H, -pox, -poy, W, H); else camera.clearViewOffset(); camera.updateMatrixWorld();
-    /* the sky goes with the camera. The moon rides high while the camera looks up and has sunk to its place over the pad by
-       the time the view is down; the stars turn with it */
-    dirOf(moonAz, lerp(MOON_UP, moonEl, g), md); moon.position.copy(md).multiplyScalar(MOON_R).addScaledVector(camera.position, 1 - g); halo.position.copy(moon.position); moonLight.position.copy(md);
-    sky.position.copy(camera.position); stars.position.copy(camera.position); stars.quaternion.setFromUnitVectors(dirOf(moonAz, moonEl, tv), md);
+    /* the sky goes with the camera. The planet rides high while the camera looks up and has sunk to its place over the pad
+       by the time the view is down; the stars turn with it. It is so far off that it keeps its distance from the camera
+       wherever the camera goes. Through a phone's narrow frame it never rises into the words over the room the page gives
+       the rocket: if its top would, it is held down to the top of that room */
+    const el = lerp(PLANET_UP, pEl, g); dirOf(pAz, el, md);
+    if (phone && g > 0.5) { toPx(tv.copy(camera.position).add(md)); const push = room - (px.y - planetR); if (push > 0) dirOf(pAz, el - Math.atan(push * 2 * TANH / H) * span(g, 0.5, 1), md); }
+    planet.position.copy(camera.position).addScaledVector(md, PLANET_D); planet.lookAt(camera.position); planetLight.position.copy(md);
+    sky.position.copy(camera.position); stars.position.copy(camera.position); stars.quaternion.setFromUnitVectors(dirOf(pAz, pEl, tv), md);
     milky.position.copy(camera.position); milky.quaternion.copy(stars.quaternion).multiply(mwBase);
-    skyU.dusk.value = dusk; skyU.time.value = time; skyU.moonDir.value.copy(md); skyU.cloudK.value = lerp(0.85, 0.7, g);
+    skyU.dusk.value = dusk; skyU.time.value = time; skyU.planetDir.value.copy(md); skyU.cloudK.value = lerp(0.85, 0.7, g);
     stars.material.uniforms.time.value = time; stars.material.uniforms.k.value = 1 - dusk * 0.75; stars.material.uniforms.low.value = lerp(0.42, 0.035, g);
     mwU.k.value = (1 - dusk) * lerp(0.05, 0.12, g);                       // the Milky Way: only once it is dark, and quieter behind Beyond's words
-    /* the planet comes up into the frame with the hills as the view comes down; its light from the moon's side of the sky */
-    if (phone) dirOf(padYaw + PLANET_PHONE[0] * DEG, PLANET_PHONE[1] * DEG, pdPhone);
-    const pd = phone ? pdPhone : pdDesk, pk = span(g, 0.45, 0.9);
-    planet.visible = pk > 0.002; planetU.k.value = pk; planetGlow.material.opacity = pk;
-    if (planet.visible) {
-      planet.position.copy(phone ? CAM_PHONE : CAM_DESK[0]).addScaledVector(pd, PLANET_D); planet.lookAt(camera.position);
-      const R = PLANET_D * Math.tan(phone ? PLANET_ANG_PHONE : PLANET_ANG); planetBall.scale.setScalar(R); planetGlow.scale.setScalar(R * 5.6);
-      planetSpin.rotation.y = (-90 - PLANET_LON) * DEG + time * 0.003;
-      tv.copy(md).addScaledVector(pd, -md.dot(pd)).normalize(); planetU.sun.value.copy(pd).multiplyScalar(-0.62).addScaledVector(tv, 0.78).normalize(); }
+    /* the planet turns, once in PLANET_TURN seconds; its light comes from PLANET_SUN, as the viewer sees it */
+    planetW.update(dt, time); planetW.spin.rotation.y = (-90 - PLANET_LON) * DEG + time * Math.PI * 2 / PLANET_TURN;
+    pRight.crossVectors(md, Y_UP).normalize(); pUp.crossVectors(pRight, md);
+    planetSun.copy(md).multiplyScalar(-PLANET_SUN[2]).addScaledVector(pRight, PLANET_SUN[0]).addScaledVector(pUp, PLANET_SUN[1]).normalize().multiplyScalar(1e6).add(planet.position);
     /* the searchlights sweep; they and the far lights come up with the hills */
     const lowK = span(g, 0.2, 0.9);
     searches.forEach(b => { const u = b.userData; b.quaternion.setFromUnitVectors(Y_UP, dirOf(u.az + 0.26 * Math.sin(time * 0.083 + u.ph), u.el + 0.07 * Math.sin(time * 0.061 + u.ph * 1.7), tv)); b.material.uniforms.k.value = 0.032 * lowK; b.visible = lowK > 0.002; });
@@ -431,7 +408,7 @@ export function createPad({ renderer, small, dpr, spec }) {
     toPx(tv.set(0, rocket.position.y - 1.5, 0)); const bx = px.x, by = px.y; toPx(tv.set(0, rocket.position.y + 44.7, 0));
     out.x = (bx + px.x) / 2; out.base = by; out.top = px.y; out.y = (by + px.y) / 2; out.h = Math.abs(by - px.y); out.k = a; out.onPad = T < 0 && a >= 1; out.down = g; out.dusk = dusk; out.vis = rocket.visible;
     if (g < 0.5) { out.y = -out.h; out.top = -out.h * 1.5; out.base = -out.h * 0.5; }           // the camera is still up in the sky: the rocket is somewhere above the frame
-    toPx(moon.position); out.moonX = px.x; out.moonY = px.y;
+    toPx(planet.position); out.planetX = px.x; out.planetY = px.y;
   }
   return { scene, camera, update, resize, out,
     launch() { return new Promise(res => { T = 0; done = res; }); },
