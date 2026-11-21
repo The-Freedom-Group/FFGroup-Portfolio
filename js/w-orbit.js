@@ -51,7 +51,7 @@ export function createOrbit({ renderer, small, dpr, spec }) {
 
   /* the worlds */
   const worlds = {}; const ids = Object.keys(WORLDS), radii = {};
-  ids.forEach(id => { const w = makeWorld(WORLDS[id], sunPos, { seg: small ? 96 : 144 }); w.group.position.set(...WORLDS[id].pos); w.k = id === 'enterprise' ? 1 : 0; w.sat = 1; w.gain = 1; w.size = 1; scene.add(w.group); worlds[id] = w;
+  ids.forEach(id => { const w = makeWorld(WORLDS[id], sunPos, { seg: small ? 96 : 160 }); w.group.position.set(...WORLDS[id].pos); w.k = id === 'enterprise' ? 1 : 0; w.sat = 1; w.gain = 1; w.size = 1; scene.add(w.group); worlds[id] = w;
     radii[id] = { R: w.R, wide: id === 'form' ? 1.75 : id === 'fuel' ? 1.25 : 1 }; });
   const ent = worlds.enterprise, R = ent.R, entTilt = WORLDS.enterprise.tilt;
   ent.spin.rotation.y = -Math.PI / 2 + 38 * DEG;                                 // the Atlantic to the front, as on the logo
@@ -87,7 +87,7 @@ export function createOrbit({ renderer, small, dpr, spec }) {
   const dirHero = V(0, 0.3, 1).normalize(), dirSys = V(0, Math.sin(SYS_EL), Math.cos(SYS_EL)), dirDock = V(0, Math.sin(SYS_EL + 9 * DEG), Math.cos(SYS_EL + 9 * DEG));
   /* the first screen's plane: it faces the opening's camera, and tips back about the globe as it is pulled away */
   const heroQ = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(dirHero, V(), V(0, 1, 0))), planeQ = new THREE.Quaternion(), tipQ = new THREE.Quaternion(), leanQ = new THREE.Quaternion().setFromAxisAngle(V(0, 0, 1), MK.lean), eul = new THREE.Euler();
-  const tmp = V(), tmp2 = V(), e1 = V(), right = V(), up = V(), px = V(), py = V(), pc = V();
+  const tmp = V(), tmp2 = V(), e1 = V(), right = V(), up = V(), shift = V(), zAxis = V(0, 0, 1), turnQ = new THREE.Quaternion(), qa = { x: 0, y: 0 }, qb = { x: 0, y: 0 };
   let W = innerWidth, H = innerHeight, snap = true, novaPrimed = 0, intro = 0, introBodies = 0, sol = null, solKey = '';
   const out = { worlds: {}, years: [], hero: new Array(16).fill(0), heroOk: false, dive: 0, focus: 0, lens: { u: 0.5, v: 0.5, r: 0.1, k: 0 }, hole: { x: 0, y: 0, r: 0 } };
   ids.forEach(id => { out.worlds[id] = { x: 0, y: 0, r: 0, a: 0 }; }); YEARS.forEach(() => out.years.push({ x: 0, y: 0, a: 0 }));
@@ -107,26 +107,34 @@ export function createOrbit({ renderer, small, dpr, spec }) {
     const A = s.top, B = s.system, Y = s.sys, focal = H / (2 * TANH);     // A, B: progress through the two orbit sections, running on past either end; Y: the opening and the system as the page drives them (sysmap.js)
     const dive = mode === 'orbit' ? ease((B.x - (B.len - DIVE_LEAD)) / DIVE_SPAN) : 0;
     const S = solve(Y), bh = mode === 'orbit' ? Y.bh : 0, nv = Y.nova;
-    /* how the first screen is pulled away: it shrinks (slowly, then all at once), tips back and turns; and how the newborn planet comes up out of the nova */
-    const gone = Math.pow(bh, 4.2), tiny = 1 - gone * 0.99, pull = 1 + 2.2 * bh * bh, back = span(nv, 0.5, 0.94), grown = span(nv, 0.6, 0.95);
-    const assembly = lerp(tiny * pull, 1, grown);                         // the size the mark and its globe are drawn at
+    /* THE RING IS THE WARP. The first screen does not move: the mark's own orbit charges with light, the inside of it
+       becomes a dark well that drags the light round and down, and everything falls INTO it on winding paths: the globe,
+       the three bodies, the letters, the headline and the figures (the page's parts, sysmap.js). The ring goes last: it
+       turns, tightens and implodes to a point, and the nova blows at that point. Then the newborn planet comes up out of it. */
+    const fallG = clamp((bh - 0.04) / 0.8), fall = fallG * fallG, tiny = Math.max(0.01, 1 - fall * 0.99), back = span(nv, 0.5, 0.94), grown = span(nv, 0.6, 0.95);
+    const rc = clamp((bh - 0.62) / 0.36), ringS = Math.max(0.012, 1 - rc * rc * 0.988), ringTurn = (16 * bh + 58 * rc * rc) * DEG;
+    const assembly = lerp(tiny, 1, grown);                                // the size the globe is drawn at
+    const kpx0 = R / Math.max(1, Y.slot.r);                               // world units to a pixel of the first screen
+    /* the middle of the ring, in the world: the camera looks at it while the opening runs (so it stands still on the screen
+       at the hole the page measured), and hands back to the globe's own place as the nova begins */
+    shift.set((MK.cx - MK.gx) * Y.markW * kpx0, -(MK.cy - MK.gy) * Y.markW * kpx0, 0).applyQuaternion(heroQ).multiplyScalar(mode === 'orbit' ? 1 - span(nv, 0.02, 0.45) : 0);
     if (mode === 'sky') {
       const yaw = 2.2 + time * 0.006 + s.skyTurn * 0.5, pitch = 0.3; tmp.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
       want.target.set(0, 2600, 600).addScaledVector(tmp, 1000); want.dir.copy(tmp).negate(); want.dist = 1000; want.ox = 0; want.oy = 0;
     } else {
       /* the mark → pulled away to the hole → the nova → the newborn planet low in the middle → up to its place in the system → the dive at Global */
-      const E = Y.slots.enterprise, heroDist = distFor(Y.slot.r), k1 = smooth(bh), k2 = span(nv, 0.58, 0.94), k3 = Y.pose;
+      const E = Y.slots.enterprise, heroDist = distFor(Y.slot.r), k2 = span(nv, 0.58, 0.94), k3 = Y.pose;
       want.target.set(0, 0, 0);
       want.dir.copy(dirHero).lerp(dirDock, span(nv, 0.25, 0.9)).lerp(dirSys, k3).normalize();
-      want.dist = Math.exp(lerp(Math.log(heroDist * pull), Math.log(S.dist), back));
-      want.ox = lerp(lerp(lerp(Y.slot.x, Y.hole.x, k1), Y.dock.x, k2), E.x, k3) - W / 2; want.oy = lerp(lerp(lerp(Y.slot.y, Y.hole.y, k1), Y.dock.y, k2), E.y, k3) - H / 2;
+      want.dist = Math.exp(lerp(Math.log(heroDist), Math.log(S.dist), back));
+      want.ox = lerp(lerp(Y.hole.x, Y.dock.x, k2), E.x, k3) - W / 2; want.oy = lerp(lerp(Y.hole.y, Y.dock.y, k2), E.y, k3) - H / 2;
       if (dive > 0) { const g = worlds.global; tmp.copy(sunDir).multiplyScalar(0.7).add(tmp2.set(0.15, 0.1, 0.6)).normalize();
         want.target.lerp(g.group.position, smooth(dive * 2.4)); want.dir.lerp(tmp, dive).normalize();      /* the camera finds Global first, then closes on it */ want.dist = Math.exp(lerp(Math.log(want.dist), Math.log(g.R * g.size * 1.55), dive)); want.ox *= 1 - dive; want.oy *= 1 - dive; }
     }
     /* ease toward the pose; a change of view (or the first frame) lands at once */
     const k = snap ? 1 : 1 - Math.exp(-dt * (mode === 'orbit' && dive > 0 ? 7 : 5)); snap = false;
     cur.target.lerp(want.target, k); cur.dir.lerp(want.dir, k).normalize(); cur.dist += (want.dist - cur.dist) * k; cur.ox += (want.ox - cur.ox) * k; cur.oy += (want.oy - cur.oy) * k;
-    camera.position.copy(cur.target).addScaledVector(cur.dir, cur.dist); camera.up.set(0, 1, 0); camera.lookAt(cur.target);
+    tmp.copy(cur.target).add(shift); camera.position.copy(tmp).addScaledVector(cur.dir, cur.dist); camera.up.set(0, 1, 0); camera.lookAt(tmp);
     if (Math.abs(cur.ox) > 0.5 || Math.abs(cur.oy) > 0.5) camera.setViewOffset(W, H, -cur.ox, -cur.oy, W, H); else camera.clearViewOffset();
     camera.updateMatrixWorld(); right.setFromMatrixColumn(camera.matrixWorld, 0); up.setFromMatrixColumn(camera.matrixWorld, 1);
 
@@ -146,39 +154,40 @@ export function createOrbit({ renderer, small, dpr, spec }) {
         /* the first real draw of a world costs a long frame. So each is drawn once, tiny, out of sight inside Enterprise,
            while the opening is at rest (one world at a time), and not as its company arrives */
         if (!w.primed && !priming && showSys && w.k < 0.002 && bh < 0.01 && intro >= 1 && w.maps.every(t => t.image)) { priming = true; w.primeN = (w.primeN || 0) + 1; w.group.visible = true; w.group.position.set(0, 0, 0); w.group.scale.setScalar(0.1); if (w.primeN > 2) w.primed = true; }
-      } else { w.size = mode === 'orbit' ? assembly : 1; w.group.scale.setScalar(Math.max(0.0001, w.size)); }
-      const on = !lit || lit.includes(id), bright = lit && on && id !== 'enterprise', sat = on ? (bright ? 1.12 : 1) : id === 'enterprise' ? 0.6 : 0.42, gain = on ? (bright ? 1.25 : 1) : id === 'enterprise' ? 0.8 : 0.7;   // the others lose most of their colour but stay worlds; Enterprise keeps more of its pink: it is what the others hang from
+      } else {
+        w.size = mode === 'orbit' ? assembly : 1; w.group.scale.setScalar(Math.max(0.0001, w.size));
+        /* the globe falls into the ring: round the middle on a winding, shrinking path (none of it once the nova has begun) */
+        if (mode === 'orbit' && fall > 0 && fall < 1) { const rx = (MK.gx - MK.cx) * Y.markW * kpx0, ry = -(MK.gy - MK.cy) * Y.markW * kpx0, a = Math.atan2(ry, rx) + 2.3 * fall, d = Math.hypot(rx, ry) * (1 - fall);
+          w.group.position.set(Math.cos(a) * d, Math.sin(a) * d, 0).applyQuaternion(heroQ).add(shift); }
+        else if (mode === 'orbit' && fall >= 1) w.group.position.copy(shift); else w.group.position.set(0, 0, 0);
+      }
+      const on = !lit || lit.includes(id), bright = lit && on && id !== 'enterprise', sat = on ? (bright ? 1.1 : 1) : id === 'enterprise' ? 0.72 : 0.6, gain = on ? (bright ? 1.18 : 1) : id === 'enterprise' ? 0.88 : 0.8;   // the others lose most of their colour but stay worlds; Enterprise keeps more of its pink: it is what the others hang from
       w.sat += (sat - w.sat) * kL; w.gain += (gain - w.gain) * kL; w.look.sat.value = w.sat; w.look.gain.value = w.gain; w.update(dt, time); });
     ent.group.rotation.set(0, 0, entTilt);
 
-    /* the first screen's plane, about the globe: where the mark's orbit lies, and what the page's own sheet is glued to */
-    const rigK = mode === 'orbit' ? 1 - span(bh, 0.9, 1) : 0, kpx = R / Math.max(1, Y.slot.r) * assembly;     // kpx: world units to a pixel of the first screen
-    eul.set(-1.08 * smooth(bh * 1.15), 0, 0.3 * smooth(bh * 1.3) + 1.5 * gone, 'ZXY'); tipQ.setFromEuler(eul); planeQ.copy(heroQ).multiply(tipQ);
+    /* the mark's orbit, standing where the logo draws it on the first screen: it charges, turns, and implodes last */
+    const rigK = mode === 'orbit' ? 1 - span(bh, 0.93, 1) : 0;
     rig.visible = rigK > 0.002 && intro > 0;
     if (rig.visible) {
-      rig.quaternion.copy(planeQ).multiply(leanQ);
-      rig.position.set((MK.cx - MK.gx) * Y.markW * kpx, -(MK.cy - MK.gy) * Y.markW * kpx, 0).applyQuaternion(planeQ); rig.scale.setScalar(MK.a * Y.markW * kpx);
-      ringMat.uniforms.k.value = rigK; ringMat.uniforms.charge.value = bh * bh; wellMat.uniforms.k.value = Math.min(1, bh * 1.4) * rigK; well.visible = bh > 0.004; ring.geometry.setDrawRange(0, Math.floor(RING_N * clamp(intro) / 3) * 3);
-      bodies.forEach((b, i) => { const u = b.userData, th = (u.at + Math.sin(time * (0.21 + i * 0.07) + i * 2.1) * 1.3 - bh * (60 + i * 30)) * DEG; b.position.set(Math.cos(th), -Math.sin(th) * KY, 0); const kk = clamp(introBodies * 3 - i) * rigK * (1 - bh * 0.5); b.scale.setScalar(Math.max(0.0001, ease(kk))); b.rotation.y += dt * 0.4; });
+      rig.quaternion.copy(heroQ).multiply(leanQ).multiply(turnQ.setFromAxisAngle(zAxis, ringTurn));
+      rig.position.copy(shift); rig.scale.setScalar(MK.a * Y.markW * kpx0 * ringS);
+      ringMat.uniforms.k.value = rigK; ringMat.uniforms.charge.value = Math.min(1.6, bh * bh + rc * 0.7); wellMat.uniforms.k.value = Math.min(1, bh * 1.5) * rigK; well.visible = bh > 0.004; ring.geometry.setDrawRange(0, Math.floor(RING_N * clamp(intro) / 3) * 3);
+      /* the three bodies leave the ring one after another and wind in to the middle, faster as they go */
+      bodies.forEach((b, i) => { const u = b.userData, pb = clamp((bh - 0.06 - i * 0.07) / 0.62), f2 = pb * pb, th = (u.at + Math.sin(time * (0.21 + i * 0.07) + i * 2.1) * 1.3 - bh * (60 + i * 30) - f2 * 220) * DEG, rr = 1 - f2;
+        b.position.set(Math.cos(th) * rr, -Math.sin(th) * KY * rr, 0); const kk = clamp(introBodies * 3 - i) * rigK * (1 - f2); b.scale.setScalar(Math.max(0.0001, ease(kk)) / Math.max(0.05, ringS)); b.rotation.y += dt * 0.4; });
+      rig.updateMatrixWorld();
     }
-    /* the hole on the screen (the middle of the mark's orbit) and the bend it puts in the light round it, for the finish */
+    /* the warp is the ring: inside it the light is dragged round and down into a dark mouth; the ring itself and the sky
+       outside it are not bent (they only dim). Its place, size, shape and lean are read off the ring as drawn, so the warp
+       tightens and goes with the ring when it implodes */
     out.lens.k = 0;
     if (rig.visible && mode === 'orbit' && bh > 0.004) {
-      const o = out.hole; project(rig.position, o); o.r = rig.scale.x * focal / Math.max(1, tmp2.copy(rig.position).sub(camera.position).dot(tmp.copy(cur.dir).negate()));
-      out.lens.u = o.x / W; out.lens.v = 1 - o.y / H; out.lens.r = Math.max(4, o.r) * 1.05 / H; out.lens.k = smooth(span(bh, 0.14, 0.72)) * (1 - span(bh, 0.93, 1));
+      const o = out.hole; project(rig.position, o); project(tmp2.set(1, 0, 0).applyMatrix4(rig.matrixWorld), qa); project(tmp2.set(0, KY, 0).applyMatrix4(rig.matrixWorld), qb);
+      const ra = Math.hypot(qa.x - o.x, qa.y - o.y), rb = Math.hypot(qb.x - o.x, qb.y - o.y); o.r = ra;
+      out.lens.u = o.x / W; out.lens.v = 1 - o.y / H; out.lens.r = Math.max(2, ra) / H; out.lens.e = clamp(rb / Math.max(1, ra), 0.05, 1); out.lens.a = Math.atan2(-(qa.y - o.y), qa.x - o.x);
+      out.lens.k = smooth(span(bh, 0.06, 0.46)) * (1 - span(bh, 0.95, 1));
     }
-    /* the page's sheet as a matrix: a point u px across and v px down from the globe's place lies at px·u − py·v in the world */
-    out.heroOk = false;
-    if (mode === 'orbit' && bh > 0.0005 && bh < 0.9995) {
-      px.set(kpx, 0, 0).applyQuaternion(planeQ).transformDirection(camera.matrixWorldInverse).multiplyScalar(kpx); py.set(0, kpx, 0).applyQuaternion(planeQ).transformDirection(camera.matrixWorldInverse).multiplyScalar(kpx); pc.set(0, 0, 0).applyMatrix4(camera.matrixWorldInverse);
-      const cx = W / 2 + cur.ox, cy = H / 2 + cur.oy, dn = Math.max(1e-3, -pc.z), sx = Y.slot.x, sy = Y.slot.y;
-      const Xu = (cx * -px.z + focal * px.x) / dn, Xv = (cx * py.z - focal * py.x) / dn, X0 = (cx * -pc.z + focal * pc.x) / dn;
-      const Yu = (cy * -px.z - focal * px.y) / dn, Yv = (cy * py.z + focal * py.y) / dn, Y0 = (cy * -pc.z - focal * pc.y) / dn;
-      const Wu = -px.z / dn, Wv = py.z / dn, W0 = -pc.z / dn, m = out.hero;
-      m[0] = Xu; m[1] = Yu; m[2] = 0; m[3] = Wu; m[4] = Xv; m[5] = Yv; m[6] = 0; m[7] = Wv; m[8] = 0; m[9] = 0; m[10] = 1; m[11] = 0; m[12] = X0 - Xu * sx - Xv * sy; m[13] = Y0 - Yu * sx - Yv * sy; m[14] = 0; m[15] = W0 - Wu * sx - Wv * sy;
-      out.heroOk = m[15] > 0.02 && isFinite(m[12]) && isFinite(m[13]);
-      if (out.heroOk) for (let i = 0; i < 16; i++) m[i] = +m[i].toFixed(6);
-    }
+    out.heroOk = false;                                                   // the first screen's own sheet no longer moves: its parts fall in one by one (sysmap.js)
 
     { const gk = mode === 'orbit' ? span(nv, 0.6, 0.96) * (1 - span(dive, 0, 0.25)) : 0; glow.visible = gk > 0.004; if (glow.visible) { glow.material.opacity = gk * 0.5; glow.position.copy(ent.group.position); glow.scale.setScalar(R * ent.size * 5.2); } }
     /* the sky and the dust */
@@ -196,7 +205,7 @@ export function createOrbit({ renderer, small, dpr, spec }) {
       sys.lanes.lay(l, e0, o, showSys ? Y.lane[id] : 0, w.laneA, W, H, pr); if (w.laneA > 0.004 && Y.lane[id] > 0.002) anyLane = true; });
     sys.lanes.mesh.visible = anyLane; if (anyLane) sys.lanes.flush();
     YEARS.forEach((_, kq) => { const o = out.years[kq]; tmp2.set(S.years[kq].x, 0, S.years[kq].z); const ok = project(tmp2, o); o.a = ok && showSys ? Y.year[kq] * sysK : 0; });
-    sys.streak.set(clamp((bh - 0.1) / 0.4), W, H, pr);
+    sys.streak.set(clamp((bh - 0.1) / 0.4), W, H, pr, Y.hole.x, Y.hole.y);      /* a meteor crosses the sky and goes into the ring */
     const nova = sys.nova; nova.visible = showSys && nv > 0.001 && nv < 0.999;
     if (!nova.visible && novaPrimed < 3 && showSys && intro >= 1 && bh < 0.01) { novaPrimed++; nova.visible = true; nova.material.uniforms.p.value = 0; }   /* drawn dark a few times at the start, for the same reason as the worlds */
     else if (nova.visible) { const u = nova.material.uniforms; u.p.value = nv; u.c0.value.set(Y.hole.x * pr, (H - Y.hole.y) * pr); u.c1.value.set(e0.x * pr, (H - e0.y) * pr); }

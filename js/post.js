@@ -67,7 +67,7 @@ void main(){
 /* the final grade, straight to the screen */
 const FINAL_FS = `varying vec2 vUv; uniform sampler2D src; uniform sampler2D bloom; uniform sampler2D dof; uniform float useDof; uniform float useBloom;
 uniform float bloomK; uniform float exposure; uniform float time; uniform float grain; uniform float vignette; uniform float fringe; uniform float aspect; uniform float lift; uniform float warp;
-uniform vec2 lensC; uniform float lensR; uniform float lensK;
+uniform vec2 lensC; uniform float lensR; uniform float lensK; uniform float lensE; uniform float lensA;
 // the same filmic curve three.js uses (ACES fitted, with its input and output matrices), so the calibration matches
 vec3 rrt(vec3 v){ vec3 a = v * (v + 0.0245786) - 0.000090537; vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081; return a / b; }
 vec3 aces(vec3 c){
@@ -78,15 +78,20 @@ float hash(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx 
 void main(){
   vec2 c = vUv - 0.5; vec2 cq = c * vec2(aspect, 1.0); float r2 = dot(cq, cq);
   vec2 uv = vUv + c * warp * r2 * 0.6;                                  // a little barrel warp in the rush of a jump
-  /* the hole the opening falls into bends the light round it: everything near it is dragged round in a swirl (most at
-     the middle) and pulled in, so the globe and its orbit are stretched into arcs as they go down */
+  /* the warp is the mark's ring. Worked out in the ring's own frame (its long axis lensA, its short axis lensE of the
+     long one, lensR long), where the ring is the unit circle: inside it the light is dragged round and pulled down into a
+     dark mouth, most at the middle; the ring itself and the sky outside it are not bent, only dimmed */
   float hole = 1.0;
   if (lensK > 0.001) {
-    vec2 d = (uv - lensC) * vec2(aspect, 1.0); float r = length(d) + 1e-5, f = r / max(lensR, 1e-4);
-    hole = 1.0 - lensK * 0.92 * (1.0 - smoothstep(0.06, 0.3 + 0.1 * lensK, f));            // its mouth: no light comes back out of the middle
-    float sw = lensK * 4.2 * exp(-f * f * 2.0); float cs = cos(sw), sn = sin(sw); d = vec2(d.x * cs - d.y * sn, d.x * sn + d.y * cs);
-    d *= 1.0 + lensK * 1.25 * exp(-f * f * 1.4);
-    uv = lensC + d / vec2(aspect, 1.0);
+    vec2 d = (uv - lensC) * vec2(aspect, 1.0), ax = vec2(cos(lensA), sin(lensA)), ay = vec2(-ax.y, ax.x);
+    float E = max(lensE, 0.05), Rr = max(lensR, 1e-4);
+    vec2 q = vec2(dot(d, ax), dot(d, ay) / E) / Rr; float f = length(q) + 1e-5;
+    float inside = 1.0 - smoothstep(0.7, 0.92, f), deep = clamp(1.0 - f, 0.0, 1.0);
+    float sw = -lensK * inside * (1.1 + 3.6 * deep * deep); float cs = cos(sw), sn = sin(sw); q = vec2(q.x * cs - q.y * sn, q.x * sn + q.y * cs);
+    q *= 1.0 + lensK * inside * 0.6 * deep;
+    hole = 1.0 - lensK * 0.94 * (1.0 - smoothstep(0.05, 0.16 + 0.5 * lensK, f));            /* its mouth: no light comes back out of the middle */
+    hole *= 1.0 - lensK * 0.42 * smoothstep(1.15, 2.8, f);                                       /* the sky round it dims as it feeds */
+    uv = lensC + (ax * q.x + ay * q.y * E) * Rr / vec2(aspect, 1.0);
   }
   vec2 fo = c * (fringe * (0.25 + r2 * 1.6));                          // lens fringing, stronger at the edges
   vec3 col = vec3(texture2D(src, uv - fo).r, texture2D(src, uv).g, texture2D(src, uv + fo).b);
@@ -125,9 +130,9 @@ export function createPost(renderer, { phone, bloom = true, dof = true, samples 
   const blurP = quadPass(BLUR_FS, { src: { value: null }, texel: { value: new THREE.Vector2() }, radius: { value: 9 } }, { TAPS: phone ? 18 : 34 });
   const fin = quadPass(FINAL_FS, { src: { value: scene.texture }, bloom: { value: null }, dof: { value: null }, useDof: { value: 0 }, useBloom: { value: bloom ? 1 : 0 }, bloomK: { value: 0.2 },
     exposure: { value: 1.0 }, time: { value: 0 }, grain: { value: 0.018 }, vignette: { value: 0.55 }, fringe: { value: 0.0016 }, aspect: { value: 1 }, lift: { value: 0.006 }, warp: { value: 0 },
-    lensC: { value: new THREE.Vector2(0.5, 0.5) }, lensR: { value: 0.1 }, lensK: { value: 0 } });
+    lensC: { value: new THREE.Vector2(0.5, 0.5) }, lensR: { value: 0.1 }, lensK: { value: 0 }, lensE: { value: 1 }, lensA: { value: 0 } });
   let cocRT = null, blurRT = null; let dofOn = !!dof, stale = false;
-  const st = { focus: 100, aperture: 0, warp: 0, fringeBoost: 0, lens: { u: 0.5, v: 0.5, r: 0.1, k: 0 } };   // lens: the hole's place (0-1 across, 0-1 up), its reach (in screen heights) and strength; for one frame
+  const st = { focus: 100, aperture: 0, warp: 0, fringeBoost: 0, lens: { u: 0.5, v: 0.5, r: 0.1, k: 0, e: 1, a: 0 } };   // lens: the ring's middle (0-1 across, 0-1 up), its long half axis (in screen heights), strength, short/long, lean; for one frame
 
   function setSize(w, h) { // w, h: the drawing buffer in pixels
     scene.setSize(w, h);
@@ -157,7 +162,7 @@ export function createPost(renderer, { phone, bloom = true, dof = true, samples 
       fin.u.dof.value = blurRT.texture;
     }
     fin.u.useDof.value = useDof ? 1 : 0; fin.u.useBloom.value = bloom ? 1 : 0; fin.u.time.value = time; fin.u.warp.value = st.warp; fin.u.fringe.value = 0.0016 + st.fringeBoost;
-    fin.u.lensC.value.set(st.lens.u, st.lens.v); fin.u.lensR.value = st.lens.r; fin.u.lensK.value = st.lens.k; st.lens.k = 0;
+    fin.u.lensC.value.set(st.lens.u, st.lens.v); fin.u.lensR.value = st.lens.r; fin.u.lensK.value = st.lens.k; fin.u.lensE.value = st.lens.e === undefined ? 1 : st.lens.e; fin.u.lensA.value = st.lens.a || 0; st.lens.k = 0;
     draw(fin, null);
   }
   /* switch the glow or the focus blur on or off; the targets are remade on the next frame */

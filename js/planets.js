@@ -4,8 +4,8 @@ import * as THREE from 'three';
 import { GLSL_NOISE, GLSL_PERTURB, PLANET_VS, OUT, rnd } from './util.js';
 
 /* ───────────── maps ───────────── */
-const SIZES = { 'earth-day': ['4k', '2k'], 'earth-night': ['2k'], 'earth-clouds': ['2k'], 'earth-spec': ['2k'], 'earth-normal': ['4k', '2k'],
-  venus: ['4k', '2k'], mars: ['2k'], 'mars-normal': ['2k'], jupiter: ['2k'], saturn: ['4k', '2k'], 'saturn-ring': ['2k'],
+const SIZES = { 'earth-day': ['4k', '2k'], 'earth-night': ['4k', '2k'], 'earth-clouds': ['4k', '2k'], 'earth-spec': ['2k'], 'earth-normal': ['4k', '2k'],   /* as the group site has them */
+  venus: ['4k', '2k'], mars: ['4k', '2k'], 'mars-normal': ['2k'], jupiter: ['4k', '2k'], saturn: ['4k', '2k'], 'saturn-ring': ['2k'],
   uranus: ['2k'], neptune: ['2k'], moon: ['2k'], 'moon-normal': ['2k'], milkyway: ['4k', '2k'], sun: ['2k'] };
 export const maps = { quality: '4k', low: false, base: 'assets/maps/', manager: new THREE.LoadingManager(), cache: {}, loaded: 0, total: 0, onItem: null, onTexture: null };
 const loader = new THREE.TextureLoader(maps.manager);

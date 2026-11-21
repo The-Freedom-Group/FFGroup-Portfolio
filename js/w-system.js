@@ -245,9 +245,9 @@ function makeStreak() {
   const mat = new THREE.ShaderMaterial({ uniforms: { halfW: { value: 7 }, coreW: { value: 1.3 } }, vertexShader: LANE_VS, fragmentShader: LANE_FS, transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false; mesh.renderOrder = 8; mesh.visible = false; const col = sceneColour('#ffb884');
   /* q: 0 to 1 across the sky, from the upper right down toward the middle; its tail longest half way */
-  return { mesh, set(q, W, H, pr) {
+  return { mesh, set(q, W, H, pr, tx, ty) {
     mesh.visible = q > 0.002 && q < 0.998; if (!mesh.visible) return;
-    const x0 = W * 0.97, y0 = H * 0.05, x1 = W * 0.5, y1 = H * 0.66, e = q * q * (3 - 2 * q), L = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / L, uy = (y1 - y0) / L, a = Math.sin(q * Math.PI);
+    const x0 = W * 0.97, y0 = H * 0.05, x1 = tx === undefined ? W * 0.5 : tx, y1 = ty === undefined ? H * 0.66 : ty, e = q * q * (3 - 2 * q), L = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / L, uy = (y1 - y0) / L, a = Math.sin(q * Math.PI);
     const hx = x0 + (x1 - x0) * e, hy = y0 + (y1 - y0) * e, tail = Math.min(260, L * 0.34) * a, hw = mat.uniforms.halfW.value / pr;
     const put = (i, x, y, al) => { P[i * 2] = x / W * 2 - 1; P[i * 2 + 1] = 1 - y / H * 2; C[i * 4] = col.r; C[i * 4 + 1] = col.g; C[i * 4 + 2] = col.b; C[i * 4 + 3] = al; };
     put(0, hx + uy * hw, hy - ux * hw, a); put(1, hx - uy * hw, hy + ux * hw, a); put(2, hx - ux * tail + uy * hw, hy - uy * tail - ux * hw, 0); put(3, hx - ux * tail - uy * hw, hy - uy * tail + ux * hw, 0);

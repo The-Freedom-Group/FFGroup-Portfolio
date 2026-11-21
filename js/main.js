@@ -74,10 +74,12 @@ railLayout(); addEventListener('resize', railLayout); if (document.fonts && docu
 if ('ResizeObserver' in window) { const ro = new ResizeObserver(railLayout); ro.observe($('#main')); ro.observe($('#foot')); }
 
 /* each frame: the rocket sits where the page is (or under the hand that holds it), and says which part it is over */
-let pull = null, railR = -1, rkPart = -1, rkNow = -1;
+let pull = null, railR = -1, rkPart = -1, rkNow = -1, rkWas = null, rkDown = false;
 function railFrame(sy) {
   const r = pull ? pull.r : railAt(sy);
   if (r !== railR) { railR = r; rocket.style.transform = `translateY(${r.toFixed(2)}px)`; }
+  /* it flies the way the page is going: nose down on the way down, nose up on the way back (a little play, so a jitter does not flip it) */
+  if (rkWas === null) rkWas = r; else if (Math.abs(r - rkWas) > 0.6) { const d = r > rkWas; rkWas = r; if (d !== rkDown) { rkDown = d; rocket.classList.toggle('down', d); } }
   const i = Math.min(parts.length - 1, seg(RL.rs, r + 0.05)), now = Math.round(clamp((pull ? pageAt(r) : sy) / RL.max) * 100);
   if (i !== rkPart) { rkPart = i; const s = parts[i]; rkNo.textContent = s.no; rkName.textContent = s.name; rocket.setAttribute('aria-valuetext', s.no + ' ' + s.name);
     railItems.forEach((li, k) => { li.classList.toggle('on', k === i); if (k === i) li.firstChild.setAttribute('aria-current', 'true'); else li.firstChild.removeAttribute('aria-current'); }); }

@@ -58,6 +58,10 @@ export function initSystem({ byId, onStep }) {
   /* ───────── the first screen's parts, each with its own way into the hole ───────── */
   const parts = [$('.hero h1'), $('.hero-sub'), $('.hero-cta'), ...$$('#kpis li')].filter(Boolean).map((node, i) => ({ node, d: Math.min(0.5, i * 0.05), spin: -(1.9 + i * 0.4), x0: 0, y0: 0, last: -1 }));
   const type = $('.mk-type');
+  /* the four words of the mark fall into the ring too, each about its own middle (in the artwork's units: 1000 = the mark's width) */
+  const NS = 'http://www.w3.org/2000/svg', HOLE = [ORBIT_C[0] * 1000, ORBIT_C[1] * 1000];
+  const words = Object.keys(TYPE).map((id, i) => { const g = $('#' + id).parentNode, w = document.createElementNS(NS, 'g'); g.parentNode.insertBefore(w, g); w.append(g);
+    const [x, wd, base, ch] = TYPE[id], cx = x + wd / 2, cy = base - ch / 2; return { w, cx, cy, d: [0.03, 0.1, 0.16, 0.07][i], spin: -(2.3 + i * 0.35), last: -1 }; });
   /* the rocket on the first screen: the courier's own drawing, flying the mark's orbit, behind the globe as it passes it.
      As the screen is pulled away it is pulled in too: round and round on a shrinking orbit, faster as it falls, stretched
      along its way and burning hard, until it is gone into the hole (it comes out of the new planet after the nova) */
@@ -179,6 +183,13 @@ export function initSystem({ byId, onStep }) {
       st.transform = `translate3d(${(Math.cos(th) * rr - p.x0).toFixed(1)}px,${(Math.sin(th) * rr - p.y0).toFixed(1)}px,0) rotate(${(th - ang0).toFixed(3)}rad) scale(${((1 - pe2) * (1 + 0.5 * pe)).toFixed(4)},${((1 - pe2) * (1 - 0.3 * pe)).toFixed(4)})`;
       st.opacity = clamp(1 - (pe - 0.62) * 3.2).toFixed(3);
     });
+    words.forEach(q => {
+      const pe = clamp((bh - q.d) / (0.84 - q.d)); if (Math.abs(pe - q.last) < 0.0008) return; q.last = pe;
+      if (pe <= 0) { q.w.removeAttribute('transform'); q.w.style.opacity = ''; return; }
+      const pe2 = pe * pe, x0 = q.cx - HOLE[0], y0 = q.cy - HOLE[1], ang0 = Math.atan2(y0, x0), th = ang0 + q.spin * pe2 * 0.55, rr = Math.hypot(x0, y0) * (1 - pe2 * 0.96);
+      q.w.setAttribute('transform', `translate(${(HOLE[0] + Math.cos(th) * rr).toFixed(1)} ${(HOLE[1] + Math.sin(th) * rr).toFixed(1)}) rotate(${((th - ang0) * 180 / Math.PI).toFixed(2)}) scale(${((1 - pe2) * (1 + 0.4 * pe)).toFixed(4)} ${((1 - pe2) * (1 - 0.3 * pe)).toFixed(4)}) translate(${(-q.cx).toFixed(1)} ${(-q.cy).toFixed(1)})`);
+      q.w.style.opacity = clamp(1 - (pe - 0.6) * 3).toFixed(3);
+    });
     if (bh < 0.9995) heroRocket(bh);
     const tk = 1 - span(bh, 0.74, 0.95); if (type.__v !== tk) { type.__v = tk; type.style.opacity = tk >= 0.999 ? '' : tk.toFixed(3); }
     return S;
@@ -187,9 +198,8 @@ export function initSystem({ byId, onStep }) {
   /* ───────── and after: the world says where its plane and its year marks are ───────── */
   let sheet = '';                                                       // how the first screen stands: at rest, moving with the world, or gone
   function after(out) {
-    const now = S.bh >= 0.9995 || (S.bh > 0.0005 && !out.heroOk) ? 'gone' : S.bh > 0.0005 ? 'moving' : 'rest';
-    if (now === 'moving') hero.style.transform = 'matrix3d(' + out.hero.join(',') + ')';
-    if (now !== sheet) { sheet = now; if (now !== 'moving') hero.style.transform = 'none'; hero.style.visibility = now === 'gone' ? 'hidden' : 'visible'; }
+    const now = S.bh >= 0.9995 ? 'gone' : 'rest';                        // the sheet stands still: its parts fall into the ring one by one (frame)
+    if (now !== sheet) { sheet = now; hero.style.transform = 'none'; hero.style.visibility = now === 'gone' ? 'hidden' : 'visible'; }
     years.forEach((y, k) => { const o = out.years[k], a = wide ? o.a * S.map : 0; if (a < 0.02) { if (y.last !== 0) { y.last = 0; y.n.style.opacity = 0; y.n.style.visibility = 'hidden'; } return; }
       y.last = a; y.n.style.visibility = 'visible'; y.n.style.opacity = a.toFixed(2); y.n.style.transform = `translate3d(${(o.x - bx0).toFixed(1)}px,${(o.y - by0).toFixed(1)}px,0) translate(-50%,-50%)`; });
   }
